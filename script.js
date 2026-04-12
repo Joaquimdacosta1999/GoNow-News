@@ -38,6 +38,7 @@ const state = {
   currentTheme: localStorage.getItem('theme') || 'dark',
   user: null,
   userProfile: null,
+  isAuthInitialized: false,
   news: [],
   savedItems: JSON.parse(localStorage.getItem('savedItems')) || [],
   learnedLessons: JSON.parse(localStorage.getItem('learnedLessons')) || [],
@@ -77,9 +78,11 @@ function init() {
   // Auth State Listener
   onAuthStateChanged(auth, async (user) => {
     state.user = user;
+    state.isAuthInitialized = true;
+    
     if (user) {
       authBtn.title = 'Logout';
-      authBtn.innerHTML = `<img src="${user.photoURL}" alt="User" style="width: 24px; height: 24px; border-radius: 50%;">`;
+      authBtn.innerHTML = `<img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + user.displayName}" alt="User" style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent-color);">`;
       
       try {
         // Get or create user profile
@@ -91,7 +94,8 @@ function init() {
             uid: user.uid,
             email: user.email,
             role: 'user',
-            displayName: user.displayName
+            displayName: user.displayName,
+            createdAt: serverTimestamp()
           };
           await setDoc(doc(db, 'users', user.uid), newProfile);
           state.userProfile = newProfile;
@@ -375,16 +379,35 @@ function renderSaved(container) {
 }
 
 function renderAdmin(container) {
+  if (!state.isAuthInitialized) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 100px 20px;">
+        <div class="loader" style="margin: 0 auto 20px;"></div>
+        <h2 style="font-size: 1.5rem;">Authenticating...</h2>
+        <p style="color: var(--text-muted);">Please wait while we verify your permissions.</p>
+      </div>
+    `;
+    return;
+  }
+
   try {
     const isAdmin = state.user?.email === 'joaquimdacosta1999@gmail.com' || state.userProfile?.role === 'admin';
     
     if (!isAdmin) {
       container.innerHTML = `
         <div style="text-align: center; padding: 100px 20px;">
-          <h1 style="font-size: 2rem; margin-bottom: 20px;">Access Denied</h1>
-          <p style="color: var(--text-muted);">You do not have permission to view this page.</p>
-          <p style="font-size: 0.8rem; margin-top: 10px;">Logged in as: ${state.user?.email || 'Not logged in'}</p>
-          <a href="#home" class="submit-btn" style="display: inline-block; margin-top: 20px;">Back to Home</a>
+          <h1 style="font-size: 2.5rem; margin-bottom: 20px;">Access Denied</h1>
+          <p style="color: var(--text-muted); font-size: 1.1rem;">You do not have permission to view this page.</p>
+          <div style="margin: 30px auto; padding: 20px; background: var(--card-bg); border-radius: 12px; max-width: 400px; border: 1px solid var(--border-color);">
+            <p style="font-size: 0.9rem; margin-bottom: 15px;">Logged in as: <strong>${state.user?.email || 'Not logged in'}</strong></p>
+            ${!state.user ? `
+              <button onclick="handleAuth()" class="submit-btn" style="width: 100%;">Login as Admin</button>
+            ` : `
+              <p style="color: #ff4444; font-size: 0.8rem;">This account is not authorized as an administrator.</p>
+              <button onclick="handleAuth()" class="submit-btn" style="width: 100%; margin-top: 15px; background: #444;">Switch Account</button>
+            `}
+          </div>
+          <a href="#home" style="color: var(--accent-color); text-decoration: none; font-weight: 500;">← Back to Home</a>
         </div>
       `;
       return;
@@ -805,5 +828,21 @@ function handleSearch(e) {
 function escapeHtml(unsafe) {
   return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
+
+
+// Global Error Handling
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled Rejection:', event.reason);
+  if (event.reason?.message?.includes('permission-denied')) {
+    alert('Permission Denied: You are not authorized to perform this action.');
+  } else {
+    alert('An unexpected error occurred: ' + (event.reason?.message || 'Unknown error'));
+  }
+});
+
+window.onerror = function(message, source, lineno, colno, error) {
+  console.error('Global Error:', message, error);
+  return false;
+};
 
 init();
