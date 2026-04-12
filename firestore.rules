@@ -1,0 +1,123 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: news
+    // Document ID: auto-generated
+    // Fields:
+    //   - category: string (Politics, Football, Entertainment, Technology)
+    //   - title: string (max 200 chars)
+    //   - excerpt: string (max 500 chars)
+    //   - content: string (max 10000 chars)
+    //   - image: string (URL)
+    //   - date: string (YYYY-MM-DD)
+    //   - readTime: string
+    //   - authorUid: string
+    //   - createdAt: timestamp
+    //
+    // Collection: comments
+    // Document ID: auto-generated
+    // Fields:
+    //   - articleId: string
+    //   - text: string (max 1000 chars)
+    //   - date: string (YYYY-MM-DD)
+    //   - userEmail: string (optional)
+    //   - userUid: string
+    //   - createdAt: timestamp
+    //
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - uid: string
+    //   - email: string
+    //   - role: string (admin, user)
+    //   - displayName: string
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+         (request.auth.token.email == "joaquimdacosta1999@gmail.com" && request.auth.token.email_verified == true));
+    }
+    
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidNews(data) {
+      return data.category in ['Politics', 'Football', 'Entertainment', 'Technology'] &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.excerpt is string && data.excerpt.size() > 0 && data.excerpt.size() <= 500 &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 10000 &&
+             isValidUrl(data.image) &&
+             data.date is string &&
+             data.readTime is string &&
+             data.authorUid == request.auth.uid;
+    }
+
+    function isValidComment(data) {
+      return data.articleId is string &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 1000 &&
+             data.date is string &&
+             data.userUid == request.auth.uid;
+    }
+
+    function isValidUser(data) {
+      return data.uid == request.auth.uid &&
+             data.email is string &&
+             data.role in ['admin', 'user'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /news/{newsId} {
+      allow read: if true; // Publicly readable
+      allow create: if isAdmin() && isValidNews(request.resource.data);
+      allow update: if isAdmin() && isValidNews(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /comments/{commentId} {
+      allow read: if true; // Publicly readable
+      allow create: if isAuthenticated() && isValidComment(request.resource.data);
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userUid && isValidComment(request.resource.data);
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userUid || isAdmin());
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'user';
+      allow update: if isAdmin() || (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role);
+    }
+    
+    match /test/{docId} {
+      allow read: if true;
+    }
+  }
+}

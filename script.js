@@ -4,7 +4,30 @@
  */
 
 import { 
-  newsData, 
+  auth, 
+  db, 
+  signInWithPopup, 
+  signOut, 
+  googleProvider, 
+  onAuthStateChanged,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  handleFirestoreError,
+  OperationType
+} from './firebase.ts';
+
+import { 
   htmlLessons, 
   dailyHappenings, 
   dailyQuotes 
@@ -13,11 +36,14 @@ import {
 // State Management
 const state = {
   currentTheme: localStorage.getItem('theme') || 'dark',
+  user: null,
+  userProfile: null,
+  news: [],
   savedItems: JSON.parse(localStorage.getItem('savedItems')) || [],
   learnedLessons: JSON.parse(localStorage.getItem('learnedLessons')) || [],
-  comments: JSON.parse(localStorage.getItem('comments')) || {},
+  comments: {},
   currentRoute: window.location.hash || '#home',
-  viewMode: localStorage.getItem('viewMode') || 'grid' // 'grid' or 'list'
+  viewMode: localStorage.getItem('viewMode') || 'grid'
 };
 
 // DOM Elements
@@ -32,10 +58,11 @@ const searchResults = document.getElementById('search-results');
 const modal = document.getElementById('modal');
 const closeModal = document.getElementById('close-modal');
 const modalBody = document.getElementById('modal-body');
+const authBtn = document.getElementById('auth-btn');
+const adminLink = document.getElementById('admin-link');
 
 // Initialize
 function init() {
-  // Set initial theme
   body.setAttribute('data-theme', state.currentTheme);
   updateThemeIcon();
 
@@ -45,16 +72,71 @@ function init() {
   closeSearch.addEventListener('click', () => searchOverlay.classList.remove('active'));
   closeModal.addEventListener('click', () => modal.classList.remove('active'));
   searchInput.addEventListener('input', handleSearch);
+  authBtn.addEventListener('click', handleAuth);
+  adminLink.addEventListener('click', () => window.location.hash = '#admin');
+
+  // Auth State Listener
+  onAuthStateChanged(auth, async (user) => {
+    state.user = user;
+    if (user) {
+      authBtn.title = 'Logout';
+      authBtn.innerHTML = `<img src="${user.photoURL}" alt="User" style="width: 24px; height: 24px; border-radius: 50%;">`;
+      
+      // Get or create user profile
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        state.userProfile = userDoc.data();
+      } else {
+        const newProfile = {
+          uid: user.uid,
+          email: user.email,
+          role: 'user',
+          displayName: user.displayName
+        };
+        await setDoc(doc(db, 'users', user.uid), newProfile);
+        state.userProfile = newProfile;
+      }
+      
+      // Show admin link if admin
+      if (state.userProfile.role === 'admin' || user.email === 'joaquimdacosta1999@gmail.com') {
+        adminLink.classList.remove('hidden');
+      }
+    } else {
+      state.userProfile = null;
+      authBtn.title = 'Login';
+      authBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+      adminLink.classList.add('hidden');
+    }
+    handleRoute();
+  });
+
+  // Real-time News Listener
+  onSnapshot(collection(db, 'news'), (snapshot) => {
+    state.news = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    handleRoute();
+  }, (error) => handleFirestoreError(error, OperationType.LIST, 'news'));
 
   // Routing
   window.addEventListener('hashchange', handleRoute);
   handleRoute();
 
-  // Close modal on outside click
   window.addEventListener('click', (e) => {
     if (e.target === modal) modal.classList.remove('active');
     if (e.target === searchOverlay) searchOverlay.classList.remove('active');
   });
+}
+
+// Auth Logic
+async function handleAuth() {
+  if (state.user) {
+    await signOut(auth);
+  } else {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error) {
+      console.error('Auth Error:', error);
+    }
+  }
 }
 
 // Theme Logic
@@ -83,12 +165,10 @@ function handleRoute() {
   const hash = window.location.hash || '#home';
   state.currentRoute = hash;
   
-  // Update active nav link
   document.querySelectorAll('.nav-links a').forEach(link => {
     link.classList.toggle('active', link.getAttribute('href') === hash);
   });
 
-  // Render Page
   renderPage(hash);
   window.scrollTo(0, 0);
 }
@@ -101,13 +181,13 @@ function renderPage(hash) {
   if (hash === '#home') {
     renderHome(container);
   } else if (hash === '#politics') {
-    renderCategory(container, 'Politics', newsData.filter(n => n.category === 'Politics'));
+    renderCategory(container, 'Politics', state.news.filter(n => n.category === 'Politics'));
   } else if (hash === '#football') {
-    renderCategory(container, 'Football', newsData.filter(n => n.category === 'Football'));
+    renderCategory(container, 'Football', state.news.filter(n => n.category === 'Football'));
   } else if (hash === '#entertainment') {
-    renderCategory(container, 'Entertainment', newsData.filter(n => n.category === 'Entertainment'));
+    renderCategory(container, 'Entertainment', state.news.filter(n => n.category === 'Entertainment'));
   } else if (hash === '#technology') {
-    renderCategory(container, 'Technology', newsData.filter(n => n.category === 'Technology'));
+    renderCategory(container, 'Technology', state.news.filter(n => n.category === 'Technology'));
   } else if (hash === '#html') {
     renderCategory(container, 'Learn HTML Daily', htmlLessons, 'html');
   } else if (hash === '#daily') {
@@ -116,6 +196,13 @@ function renderPage(hash) {
     renderSaved(container);
   } else if (hash === '#about') {
     renderAbout(container);
+  } else if (hash === '#admin') {
+    renderAdmin(container);
+  } else if (hash.startsWith('#article/')) {
+    const id = hash.split('/')[1];
+    const article = state.news.find(n => n.id === id);
+    if (article) openDetail(id, 'news');
+    else window.location.hash = '#home';
   }
 
   mainContent.appendChild(container);
@@ -123,15 +210,15 @@ function renderPage(hash) {
 
 // Page Renderers
 function renderHome(container) {
-  const featured = newsData[0];
-  const latest = newsData.slice(1, 7);
-  const trending = newsData.slice(0, 5);
+  const featured = state.news[0] || { title: 'No news yet', excerpt: 'Check back later!', image: 'https://picsum.photos/seed/gonow/800/450', category: 'General' };
+  const latest = state.news.slice(1, 7);
+  const trending = state.news.slice(0, 5);
   const quote = dailyQuotes[0];
   const happenings = dailyHappenings[0];
 
   container.innerHTML = `
     <section class="hero">
-      <div class="hero-card" onclick="window.location.hash = '#article/${featured.id}'">
+      <div class="hero-card" onclick="${featured.id ? `window.location.hash = '#article/${featured.id}'` : ''}">
         <img src="${featured.image}" alt="${featured.title}" class="hero-img" loading="lazy">
         <div class="hero-overlay"></div>
         <div class="hero-content">
@@ -146,7 +233,7 @@ function renderHome(container) {
       <section class="latest-news">
         <h2 class="section-title">Latest News</h2>
         <div class="news-grid list-view">
-          ${latest.map(item => createNewsCard(item)).join('')}
+          ${latest.length > 0 ? latest.map(item => createNewsCard(item)).join('') : '<p>No news available.</p>'}
         </div>
       </section>
 
@@ -201,10 +288,10 @@ function renderCategory(container, title, items, type = 'news') {
       </div>
     </div>
     <div class="news-grid ${isList ? 'list-view' : ''}">
-      ${items.map(item => {
+      ${items.length > 0 ? items.map(item => {
         if (type === 'news') return createNewsCard(item);
         if (type === 'html') return createHtmlCard(item);
-      }).join('')}
+      }).join('') : '<p>No items found in this category.</p>'}
     </div>
   `;
   attachCardListeners();
@@ -257,7 +344,6 @@ function renderSaved(container) {
     return;
   }
 
-  // Group by category
   const categories = ['Politics', 'Football', 'Entertainment', 'Technology', 'HTML'];
   const grouped = categories.reduce((acc, cat) => {
     acc[cat] = saved.filter(item => item.category === cat);
@@ -284,25 +370,136 @@ function renderSaved(container) {
   attachCardListeners();
 }
 
+function renderAdmin(container) {
+  if (!state.userProfile || (state.userProfile.role !== 'admin' && state.user.email !== 'joaquimdacosta1999@gmail.com')) {
+    container.innerHTML = `<h1>Access Denied</h1><p>You must be an admin to view this page.</p>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <h1 class="section-title" style="font-size: 2rem; margin-top: 40px;">Admin Dashboard</h1>
+    <div class="main-grid">
+      <div>
+        <section class="daily-box">
+          <h3>Create New Article</h3>
+          <form id="news-form" class="comment-form">
+            <input type="text" id="news-title" class="comment-input" placeholder="Article Title" required>
+            <select id="news-category" class="comment-input" required>
+              <option value="Politics">Politics</option>
+              <option value="Football">Football</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Technology">Technology</option>
+            </select>
+            <input type="url" id="news-image" class="comment-input" placeholder="Image URL (e.g. picsum.photos)" required>
+            <textarea id="news-excerpt" class="comment-input" placeholder="Short Excerpt (4 lines max)" rows="3" required></textarea>
+            <textarea id="news-content" class="comment-input" placeholder="Full Article Content" rows="10" required></textarea>
+            <button type="submit" class="submit-btn" style="width: 100%;">Publish Article</button>
+          </form>
+        </section>
+      </div>
+      <aside>
+        <h2 class="section-title">Manage Content</h2>
+        <div class="daily-box">
+          <p>Total Articles: ${state.news.length}</p>
+          <div style="margin-top: 20px;">
+            ${state.news.map(n => `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+                <span style="font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${n.title}</span>
+                <button onclick="deleteArticle('${n.id}')" style="color: #ff4444; font-size: 0.8rem;">Delete</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="daily-box" style="margin-top: 20px;">
+          <h3>System Tools</h3>
+          <button id="seed-btn" class="submit-btn" style="width: 100%; background: #666;">Seed Database with Mock Data</button>
+        </div>
+      </aside>
+    </div>
+  `;
+
+  document.getElementById('news-form').addEventListener('submit', handleNewsSubmit);
+  document.getElementById('seed-btn').addEventListener('click', seedDatabase);
+}
+
+async function seedDatabase() {
+  if (!confirm('This will add all mock articles to your live database. Continue?')) return;
+  const btn = document.getElementById('seed-btn');
+  btn.disabled = true;
+  btn.innerText = 'Seeding...';
+
+  const { newsData } = await import('./data.js');
+  
+  try {
+    for (const item of newsData) {
+      const { id, ...data } = item;
+      await addDoc(collection(db, 'news'), {
+        ...data,
+        authorUid: state.user.uid,
+        createdAt: serverTimestamp()
+      });
+    }
+    alert('Database seeded successfully!');
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'news');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Seed Database with Mock Data';
+  }
+}
+
+async function handleNewsSubmit(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  btn.disabled = true;
+  btn.innerText = 'Publishing...';
+
+  const newsItem = {
+    title: document.getElementById('news-title').value,
+    category: document.getElementById('news-category').value,
+    image: document.getElementById('news-image').value,
+    excerpt: document.getElementById('news-excerpt').value,
+    content: document.getElementById('news-content').value,
+    date: new Date().toISOString().split('T')[0],
+    readTime: Math.ceil(document.getElementById('news-content').value.split(' ').length / 200) + ' min',
+    authorUid: state.user.uid,
+    createdAt: serverTimestamp()
+  };
+
+  try {
+    await addDoc(collection(db, 'news'), newsItem);
+    alert('Article published successfully!');
+    e.target.reset();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, 'news');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Publish Article';
+  }
+}
+
+window.deleteArticle = async (id) => {
+  if (!confirm('Are you sure you want to delete this article?')) return;
+  try {
+    await deleteDoc(doc(db, 'news', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, 'news/' + id);
+  }
+};
+
 function renderAbout(container) {
   container.innerHTML = `
     <div style="max-width: 800px; margin: 60px auto;">
       <h1 style="font-size: 3rem; margin-bottom: 20px;">About GoNow</h1>
       <p style="font-size: 1.2rem; margin-bottom: 40px; color: var(--text-muted);">
-        GoNow is a modern, fast, and simple news portal designed for the modern reader. 
+        GoNow is a modern, fast, and simple news portal powered by Firebase. 
       </p>
-      
-      <h2 class="section-title">Our Mission</h2>
-      <p style="margin-bottom: 30px;">
-        To provide a clean, distraction-free reading experience that focuses on what matters most: the content. 
-      </p>
-
       <h2 class="section-title">Technologies Used</h2>
       <ul style="margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <li>✓ Vanilla HTML5</li>
-        <li>✓ Vanilla CSS3</li>
-        <li>✓ Vanilla JavaScript</li>
-        <li>✓ LocalStorage</li>
+        <li>✓ Vanilla HTML5/CSS3/JS</li>
+        <li>✓ Firebase Authentication</li>
+        <li>✓ Firestore Real-time Database</li>
+        <li>✓ LocalStorage Persistence</li>
       </ul>
     </div>
   `;
@@ -373,16 +570,26 @@ function attachCardListeners() {
   });
 }
 
-function openDetail(id, type) {
+async function openDetail(id, type) {
   let item;
-  if (type === 'news') item = newsData.find(n => n.id === id);
+  if (type === 'news') item = state.news.find(n => n.id === id);
   else if (type === 'html') item = htmlLessons.find(h => h.id === id);
 
   if (!item) return;
 
   const isSaved = state.savedItems.some(s => s.id === item.id);
-  const comments = state.comments[id] || [];
+  
+  // Real-time comments listener
+  const q = query(collection(db, 'comments'), where('articleId', '==', id), orderBy('createdAt', 'desc'));
+  onSnapshot(q, (snapshot) => {
+    const comments = snapshot.docs.map(doc => doc.data());
+    renderModalContent(item, type, isSaved, comments);
+  }, (error) => handleFirestoreError(error, OperationType.LIST, 'comments'));
 
+  modal.classList.add('active');
+}
+
+function renderModalContent(item, type, isSaved, comments) {
   modalBody.innerHTML = `
     <img src="${item.image}" alt="${item.title}" class="detail-img">
     <div class="detail-meta">
@@ -391,11 +598,9 @@ function openDetail(id, type) {
       ${item.readTime ? `<span>${item.readTime} read</span>` : ''}
     </div>
     <h1 class="detail-title">${item.title}</h1>
-    
     <div class="detail-body">
       ${item.content ? `<p>${item.content}</p>` : ''}
     </div>
-
     <div class="card-footer mt-4">
       <div style="display: flex; gap: 15px;">
         <button class="submit-btn" onclick="toggleSave('${item.id}', '${type}')">
@@ -406,18 +611,19 @@ function openDetail(id, type) {
         </button>
       </div>
     </div>
-
     <section class="comments-section">
       <h3>Comments (${comments.length})</h3>
-      <div class="comment-form">
-        <textarea class="comment-input" id="comment-text" placeholder="Add a comment..." rows="3"></textarea>
-        <button class="submit-btn" onclick="addComment('${id}')">Post Comment</button>
-      </div>
+      ${state.user ? `
+        <div class="comment-form">
+          <textarea class="comment-input" id="comment-text" placeholder="Add a comment..." rows="3"></textarea>
+          <button class="submit-btn" onclick="addComment('${item.id}')">Post Comment</button>
+        </div>
+      ` : '<p style="margin-bottom: 20px;">Please <a href="#" onclick="handleAuth(); return false;" style="color: var(--primary-color); font-weight: 600;">login</a> to comment.</p>'}
       <div class="comment-list">
         ${comments.length > 0 ? comments.map(c => `
           <div class="comment">
             <div class="comment-header">
-              <span>User</span>
+              <span>${c.userEmail || 'Anonymous'}</span>
               <span>${c.date}</span>
             </div>
             <p>${c.text}</p>
@@ -426,13 +632,11 @@ function openDetail(id, type) {
       </div>
     </section>
   `;
-
-  modal.classList.add('active');
 }
 
-// Global functions for inline onclick
+// Global functions
 window.toggleSave = (id, type) => {
-  const allItems = [...newsData, ...htmlLessons];
+  const allItems = [...state.news, ...htmlLessons];
   const item = allItems.find(i => i.id === id);
   if (!item) return;
 
@@ -444,11 +648,8 @@ window.toggleSave = (id, type) => {
   }
 
   localStorage.setItem('savedItems', JSON.stringify(state.savedItems));
-  
   if (state.currentRoute === '#saved') renderPage('#saved');
   else handleRoute();
-  
-  if (modal.classList.contains('active')) openDetail(id, type);
 };
 
 window.toggleLearned = (id) => {
@@ -470,47 +671,47 @@ window.copyCode = (btn, code) => {
   });
 };
 
-window.addComment = (id) => {
+window.addComment = async (id) => {
   const input = document.getElementById('comment-text');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text || !state.user) return;
 
-  if (!state.comments[id]) state.comments[id] = [];
-  state.comments[id].unshift({
+  const comment = {
+    articleId: id,
     text,
-    date: new Date().toLocaleDateString()
-  });
+    date: new Date().toLocaleDateString(),
+    userEmail: state.user.email,
+    userUid: state.user.uid,
+    createdAt: serverTimestamp()
+  };
 
-  localStorage.setItem('comments', JSON.stringify(state.comments));
-  input.value = '';
-  openDetail(id, 'news');
+  try {
+    await addDoc(collection(db, 'comments'), comment);
+    input.value = '';
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, 'comments');
+  }
 };
 
 window.shareItem = (title) => {
   if (navigator.share) {
-    navigator.share({
-      title: 'GoNow - ' + title,
-      url: window.location.href
-    });
+    navigator.share({ title: 'GoNow - ' + title, url: window.location.href });
   } else {
     alert('Sharing is not supported in this browser.');
   }
 };
 
-// Search Logic
 function handleSearch(e) {
   const query = e.target.value.toLowerCase();
   if (!query) {
     searchResults.innerHTML = '';
     return;
   }
-
-  const allItems = [...newsData, ...htmlLessons];
+  const allItems = [...state.news, ...htmlLessons];
   const results = allItems.filter(item => 
     item.title.toLowerCase().includes(query) || 
     (item.excerpt && item.excerpt.toLowerCase().includes(query))
   );
-
   searchResults.innerHTML = results.map(item => `
     <div class="trending-item" style="padding: 15px; border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="searchOverlay.classList.remove('active'); openDetail('${item.id}', '${item.category === 'HTML' ? 'html' : 'news'}')">
       <div class="trending-content">
@@ -521,15 +722,8 @@ function handleSearch(e) {
   `).join('');
 }
 
-// Helpers
 function escapeHtml(unsafe) {
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
-// Start the app
 init();

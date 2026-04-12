@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "News": {
+      "title": "News Article",
+      "description": "A news article published on the GoNow platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string", "enum": ["Politics", "Football", "Entertainment", "Technology"] },
+        "title": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "content": { "type": "string" },
+        "image": { "type": "string", "format": "uri" },
+        "date": { "type": "string", "format": "date" },
+        "readTime": { "type": "string" },
+        "authorUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["category", "title", "excerpt", "content", "image", "date", "readTime", "authorUid", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment on a news article.",
+      "type": "object",
+      "properties": {
+        "articleId": { "type": "string" },
+        "text": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "userEmail": { "type": "string", "format": "email" },
+        "userUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["articleId", "text", "date", "userUid", "createdAt"]
+    },
+    "User": {
+      "title": "User Profile",
+      "description": "User profile information and roles.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "displayName": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/news/{newsId}": {
+      "schema": "News",
+      "description": "Collection of news articles."
+    },
+    "/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Collection of comments on articles."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and roles."
+    }
+  }
+}
