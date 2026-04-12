@@ -251,7 +251,7 @@ header {
 
 .news-grid.list-view .card {
   flex-direction: row;
-  height: 200px;
+  min-height: 220px;
 }
 
 .news-grid.list-view .card-img-wrapper {
@@ -265,7 +265,7 @@ header {
 }
 
 .news-grid.list-view .card-excerpt {
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 4;
 }
 
 /* View Toggle */
@@ -357,7 +357,7 @@ header {
   color: var(--text-muted);
   margin-bottom: 15px;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
