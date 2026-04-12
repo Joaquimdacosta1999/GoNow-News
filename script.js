@@ -136,16 +136,34 @@ function init() {
 
 // Auth Logic
 async function handleAuth() {
+  console.log('handleAuth triggered, current user:', state.user);
   if (state.user) {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+      console.log('Sign out successful');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      alert('Sign out failed: ' + error.message);
+    }
   } else {
     try {
-      await signInWithPopup(auth, googleProvider);
+      console.log('Starting Google Sign-In...');
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log('Sign-in successful:', result.user.email);
     } catch (error) {
       console.error('Auth Error:', error);
+      if (error.code === 'auth/popup-blocked') {
+        alert('Sign-in popup was blocked. Please allow popups for this site.');
+      } else if (error.code === 'auth/unauthorized-domain') {
+        alert('This domain is not authorized for Firebase Auth. Please check your Firebase Console settings.');
+      } else {
+        alert('Authentication failed: ' + error.message);
+      }
     }
   }
 }
+
+window.handleAuth = handleAuth;
 
 // Theme Logic
 function toggleTheme() {
@@ -379,12 +397,14 @@ function renderSaved(container) {
 }
 
 function renderAdmin(container) {
+  console.log('Rendering Admin Dashboard. Auth Initialized:', state.isAuthInitialized, 'User:', state.user?.email);
+  
   if (!state.isAuthInitialized) {
     container.innerHTML = `
       <div style="text-align: center; padding: 100px 20px;">
         <div class="loader" style="margin: 0 auto 20px;"></div>
-        <h2 style="font-size: 1.5rem;">Authenticating...</h2>
-        <p style="color: var(--text-muted);">Please wait while we verify your permissions.</p>
+        <h2 style="font-size: 1.5rem;">Verifying Identity...</h2>
+        <p style="color: var(--text-muted);">Connecting to secure backend...</p>
       </div>
     `;
     return;
@@ -396,18 +416,34 @@ function renderAdmin(container) {
     if (!isAdmin) {
       container.innerHTML = `
         <div style="text-align: center; padding: 100px 20px;">
-          <h1 style="font-size: 2.5rem; margin-bottom: 20px;">Access Denied</h1>
-          <p style="color: var(--text-muted); font-size: 1.1rem;">You do not have permission to view this page.</p>
-          <div style="margin: 30px auto; padding: 20px; background: var(--card-bg); border-radius: 12px; max-width: 400px; border: 1px solid var(--border-color);">
-            <p style="font-size: 0.9rem; margin-bottom: 15px;">Logged in as: <strong>${state.user?.email || 'Not logged in'}</strong></p>
+          <h1 style="font-size: 2.5rem; margin-bottom: 20px; color: #ff4444;">Access Denied</h1>
+          <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 500px; margin: 0 auto 30px;">
+            You do not have administrative permissions to access this dashboard.
+          </p>
+          
+          <div style="margin: 30px auto; padding: 30px; background: var(--card-bg); border-radius: 16px; max-width: 450px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);">
+              <p style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Current Session</p>
+              <p style="font-size: 1.1rem; font-weight: 600;">${state.user?.email || 'Not Logged In'}</p>
+            </div>
+            
             ${!state.user ? `
-              <button onclick="handleAuth()" class="submit-btn" style="width: 100%;">Login as Admin</button>
+              <p style="font-size: 0.9rem; margin-bottom: 20px;">Please sign in with your administrator account to continue.</p>
+              <button onclick="window.handleAuth()" class="submit-btn" style="width: 100%; padding: 15px; font-size: 1rem;">Login as Admin</button>
             ` : `
-              <p style="color: #ff4444; font-size: 0.8rem;">This account is not authorized as an administrator.</p>
-              <button onclick="handleAuth()" class="submit-btn" style="width: 100%; margin-top: 15px; background: #444;">Switch Account</button>
+              <p style="color: #ff4444; font-size: 0.9rem; margin-bottom: 20px; background: rgba(255,68,68,0.1); padding: 10px; border-radius: 8px;">
+                This account (${state.user.email}) is not registered as an administrator.
+              </p>
+              <button onclick="window.handleAuth()" class="submit-btn" style="width: 100%; margin-top: 10px; background: #444; padding: 12px;">Switch to Admin Account</button>
             `}
           </div>
-          <a href="#home" style="color: var(--accent-color); text-decoration: none; font-weight: 500;">← Back to Home</a>
+          
+          <div style="margin-top: 40px;">
+            <a href="#home" style="color: var(--accent-color); text-decoration: none; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+              Return to Website
+            </a>
+          </div>
         </div>
       `;
       return;
@@ -532,10 +568,12 @@ async function seedDatabase() {
 }
 
 async function handleNewsSubmit(e) {
+  console.log('--- News Submission Started ---');
   e.preventDefault();
   
   if (!state.user) {
-    alert('You must be logged in to publish articles.');
+    console.error('Submission failed: No user in state');
+    alert('Error: You are not logged in. Please log in again.');
     return;
   }
 
@@ -545,11 +583,16 @@ async function handleNewsSubmit(e) {
   btn.innerText = 'Publishing...';
 
   try {
+    console.log('Collecting form data...');
     const title = document.getElementById('news-title').value;
     const category = document.getElementById('news-category').value;
     const image = document.getElementById('news-image').value;
     const excerpt = document.getElementById('news-excerpt').value;
     const content = document.getElementById('news-content').value;
+
+    if (!title || !content) {
+      throw new Error('Title and Content are required.');
+    }
 
     const newsItem = {
       title,
@@ -563,21 +606,23 @@ async function handleNewsSubmit(e) {
       createdAt: serverTimestamp()
     };
 
-    console.log('Attempting to publish news:', newsItem);
+    console.log('Data to send:', newsItem);
 
-    await addDoc(collection(db, 'news'), newsItem);
+    const docRef = await addDoc(collection(db, 'news'), newsItem);
+    console.log('Success! Document ID:', docRef.id);
     
     alert('Article published successfully!');
     e.target.reset();
   } catch (error) {
-    console.error('Publish Error Details:', error);
-    alert('Failed to publish article. Error: ' + error.message);
+    console.error('CRITICAL PUBLISH ERROR:', error);
+    alert('PUBLISH FAILED!\n\nReason: ' + error.message + '\n\nPlease check the browser console for more details.');
     try {
       handleFirestoreError(error, OperationType.CREATE, 'news');
     } catch (e) { /* logged */ }
   } finally {
     btn.disabled = false;
     btn.innerText = originalText;
+    console.log('--- News Submission Ended ---');
   }
 }
 
