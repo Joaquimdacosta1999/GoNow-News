@@ -485,9 +485,8 @@ async function seedDatabase() {
   btn.disabled = true;
   btn.innerText = 'Seeding...';
 
-  const { newsData } = await import('./data.js');
-  
   try {
+    const { newsData } = await import('./data.js');
     for (const item of newsData) {
       const { id, ...data } = item;
       await addDoc(collection(db, 'news'), {
@@ -498,7 +497,11 @@ async function seedDatabase() {
     }
     alert('Database seeded successfully!');
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, 'news');
+    console.error('Seed Error:', error);
+    alert('Failed to seed database. Error: ' + error.message);
+    try {
+      handleFirestoreError(error, OperationType.WRITE, 'news');
+    } catch (e) { /* already logged */ }
   } finally {
     btn.disabled = false;
     btn.innerText = 'Seed Database with Mock Data';
@@ -517,7 +520,7 @@ async function handleNewsSubmit(e) {
     image: document.getElementById('news-image').value,
     excerpt: document.getElementById('news-excerpt').value,
     content: document.getElementById('news-content').value,
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     readTime: Math.ceil(document.getElementById('news-content').value.split(' ').length / 200) + ' min',
     authorUid: state.user.uid,
     createdAt: serverTimestamp()
@@ -528,7 +531,11 @@ async function handleNewsSubmit(e) {
     alert('Article published successfully!');
     e.target.reset();
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, 'news');
+    console.error('Publish Error:', error);
+    alert('Failed to publish article. Error: ' + error.message);
+    try {
+      handleFirestoreError(error, OperationType.CREATE, 'news');
+    } catch (e) { /* already logged */ }
   } finally {
     btn.disabled = false;
     btn.innerText = 'Publish Article';
