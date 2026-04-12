@@ -510,35 +510,51 @@ async function seedDatabase() {
 
 async function handleNewsSubmit(e) {
   e.preventDefault();
+  
+  if (!state.user) {
+    alert('You must be logged in to publish articles.');
+    return;
+  }
+
   const btn = e.target.querySelector('button');
+  const originalText = btn.innerText;
   btn.disabled = true;
   btn.innerText = 'Publishing...';
 
-  const newsItem = {
-    title: document.getElementById('news-title').value,
-    category: document.getElementById('news-category').value,
-    image: document.getElementById('news-image').value,
-    excerpt: document.getElementById('news-excerpt').value,
-    content: document.getElementById('news-content').value,
-    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    readTime: Math.ceil(document.getElementById('news-content').value.split(' ').length / 200) + ' min',
-    authorUid: state.user.uid,
-    createdAt: serverTimestamp()
-  };
-
   try {
+    const title = document.getElementById('news-title').value;
+    const category = document.getElementById('news-category').value;
+    const image = document.getElementById('news-image').value;
+    const excerpt = document.getElementById('news-excerpt').value;
+    const content = document.getElementById('news-content').value;
+
+    const newsItem = {
+      title,
+      category,
+      image,
+      excerpt,
+      content,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      readTime: Math.ceil(content.split(' ').length / 200) + ' min',
+      authorUid: state.user.uid,
+      createdAt: serverTimestamp()
+    };
+
+    console.log('Attempting to publish news:', newsItem);
+
     await addDoc(collection(db, 'news'), newsItem);
+    
     alert('Article published successfully!');
     e.target.reset();
   } catch (error) {
-    console.error('Publish Error:', error);
+    console.error('Publish Error Details:', error);
     alert('Failed to publish article. Error: ' + error.message);
     try {
       handleFirestoreError(error, OperationType.CREATE, 'news');
-    } catch (e) { /* already logged */ }
+    } catch (e) { /* logged */ }
   } finally {
     btn.disabled = false;
-    btn.innerText = 'Publish Article';
+    btn.innerText = originalText;
   }
 }
 

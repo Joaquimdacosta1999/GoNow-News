@@ -52,8 +52,9 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
-         request.auth.token.email == "joaquimdacosta1999@gmail.com");
+        (request.auth.token.email == "joaquimdacosta1999@gmail.com" || 
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
     
     function isValidUrl(url) {
@@ -70,13 +71,14 @@ service cloud.firestore {
 
     function isValidNews(data) {
       return data.category in ['Politics', 'Football', 'Entertainment', 'Technology'] &&
-             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
-             data.excerpt is string && data.excerpt.size() > 0 && data.excerpt.size() <= 500 &&
-             data.content is string && data.content.size() > 0 && data.content.size() <= 10000 &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 500 &&
+             data.excerpt is string && data.excerpt.size() > 0 && data.excerpt.size() <= 2000 &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 50000 &&
              isValidUrl(data.image) &&
              data.date is string &&
              data.readTime is string &&
-             data.authorUid == request.auth.uid;
+             data.authorUid == request.auth.uid &&
+             data.createdAt is timestamp;
     }
 
     function isValidComment(data) {
