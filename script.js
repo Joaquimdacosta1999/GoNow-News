@@ -375,98 +375,108 @@ function renderSaved(container) {
 }
 
 function renderAdmin(container) {
-  const isAdmin = state.userProfile?.role === 'admin' || state.user?.email === 'joaquimdacosta1999@gmail.com';
-  
-  if (!isAdmin) {
+  try {
+    const isAdmin = state.user?.email === 'joaquimdacosta1999@gmail.com' || state.userProfile?.role === 'admin';
+    
+    if (!isAdmin) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 100px 20px;">
+          <h1 style="font-size: 2rem; margin-bottom: 20px;">Access Denied</h1>
+          <p style="color: var(--text-muted);">You do not have permission to view this page.</p>
+          <p style="font-size: 0.8rem; margin-top: 10px;">Logged in as: ${state.user?.email || 'Not logged in'}</p>
+          <a href="#home" class="submit-btn" style="display: inline-block; margin-top: 20px;">Back to Home</a>
+        </div>
+      `;
+      return;
+    }
+
+    const userName = state.user?.displayName || state.user?.email?.split('@')[0] || 'Admin';
+
     container.innerHTML = `
-      <div style="text-align: center; padding: 100px 20px;">
-        <h1 style="font-size: 2rem; margin-bottom: 20px;">Access Denied</h1>
-        <p style="color: var(--text-muted);">You do not have permission to view this page.</p>
-        <p style="font-size: 0.8rem; margin-top: 10px;">Logged in as: ${state.user?.email || 'Not logged in'}</p>
-        <a href="#home" class="submit-btn" style="display: inline-block; margin-top: 20px;">Back to Home</a>
+      <div class="admin-dashboard-wrapper" style="padding-top: 40px; min-height: 600px;">
+        <h1 class="section-title" style="font-size: 2.5rem; margin-bottom: 10px;">Admin Dashboard</h1>
+        <p style="color: var(--text-muted); margin-bottom: 40px;">Welcome back, <strong>${userName}</strong>. Manage your news portal here.</p>
+        
+        <div class="main-grid">
+          <div class="admin-main">
+            <section class="daily-box" style="padding: 30px;">
+              <h3 style="font-size: 1.5rem; margin-bottom: 20px;">Create New Article</h3>
+              <form id="news-form" class="comment-form">
+                <div style="margin-bottom: 15px;">
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Title</label>
+                  <input type="text" id="news-title" class="comment-input" placeholder="Enter article title..." required>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Category</label>
+                  <select id="news-category" class="comment-input" required>
+                    <option value="Politics">Politics</option>
+                    <option value="Football">Football</option>
+                    <option value="Entertainment">Entertainment</option>
+                    <option value="Technology">Technology</option>
+                  </select>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Image URL</label>
+                  <input type="url" id="news-image" class="comment-input" placeholder="https://picsum.photos/seed/news/800/450" required>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Excerpt (Short Summary)</label>
+                  <textarea id="news-excerpt" class="comment-input" placeholder="A brief summary..." rows="3" required></textarea>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Full Content</label>
+                  <textarea id="news-content" class="comment-input" placeholder="Write the full article here..." rows="12" required></textarea>
+                </div>
+                
+                <button type="submit" class="submit-btn" style="width: 100%; padding: 15px; font-size: 1.1rem;">Publish Article</button>
+              </form>
+            </section>
+          </div>
+          
+          <aside class="admin-sidebar">
+            <h2 class="section-title">Manage Content</h2>
+            <div class="daily-box">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span style="font-weight: 600;">Live Articles</span>
+                <span class="badge">${state.news?.length || 0}</span>
+              </div>
+              <div style="max-height: 400px; overflow-y: auto;">
+                ${state.news && state.news.length > 0 ? state.news.map(n => `
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
+                    <div style="overflow: hidden; padding-right: 10px;">
+                      <p style="font-size: 0.9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0;">${n.title}</p>
+                      <span style="font-size: 0.7rem; color: var(--text-muted);">${n.category}</span>
+                    </div>
+                    <button onclick="deleteArticle('${n.id}')" style="color: #ff4444; font-size: 0.8rem; background: none; border: none; cursor: pointer; font-weight: 600; flex-shrink: 0;">Delete</button>
+                  </div>
+                `).join('') : '<p style="color: var(--text-muted); font-size: 0.9rem;">No articles found.</p>'}
+              </div>
+            </div>
+
+            <div class="daily-box" style="margin-top: 20px;">
+              <h3 style="margin-bottom: 15px;">System Tools</h3>
+              <button id="seed-btn" class="submit-btn" style="width: 100%; background: #444; margin-bottom: 10px;">Seed with Mock Data</button>
+              <button onclick="location.reload()" class="submit-btn" style="width: 100%; background: #666;">Force Refresh App</button>
+            </div>
+          </aside>
+        </div>
       </div>
     `;
-    return;
+
+    const form = document.getElementById('news-form');
+    if (form) form.addEventListener('submit', handleNewsSubmit);
+    
+    const seedBtn = document.getElementById('seed-btn');
+    if (seedBtn) seedBtn.addEventListener('click', seedDatabase);
+
+  } catch (error) {
+    console.error('Admin render error:', error);
+    container.innerHTML = `<div style="padding: 50px; text-align: center;"><h2>Error loading dashboard</h2><p>${error.message}</p><button onclick="location.reload()" class="submit-btn">Retry</button></div>`;
   }
-
-  container.innerHTML = `
-    <div class="admin-dashboard-wrapper" style="padding-top: 40px;">
-      <h1 class="section-title" style="font-size: 2.5rem; margin-bottom: 10px;">Admin Dashboard</h1>
-      <p style="color: var(--text-muted); margin-bottom: 40px;">Welcome back, ${state.user.displayName}. Manage your news portal here.</p>
-      
-      <div class="main-grid">
-        <div class="admin-main">
-          <section class="daily-box" style="padding: 30px;">
-            <h3 style="font-size: 1.5rem; margin-bottom: 20px;">Create New Article</h3>
-            <form id="news-form" class="comment-form">
-              <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Title</label>
-                <input type="text" id="news-title" class="comment-input" placeholder="Enter article title..." required>
-              </div>
-              
-              <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Category</label>
-                <select id="news-category" class="comment-input" required>
-                  <option value="Politics">Politics</option>
-                  <option value="Football">Football</option>
-                  <option value="Entertainment">Entertainment</option>
-                  <option value="Technology">Technology</option>
-                </select>
-              </div>
-              
-              <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Image URL</label>
-                <input type="url" id="news-image" class="comment-input" placeholder="https://picsum.photos/seed/news/800/450" required>
-                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Use high-quality image links.</p>
-              </div>
-              
-              <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Excerpt (Short Summary)</label>
-                <textarea id="news-excerpt" class="comment-input" placeholder="A brief summary for the card view..." rows="3" required></textarea>
-              </div>
-              
-              <div style="margin-bottom: 25px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Full Content</label>
-                <textarea id="news-content" class="comment-input" placeholder="Write the full article here..." rows="12" required></textarea>
-              </div>
-              
-              <button type="submit" class="submit-btn" style="width: 100%; padding: 15px; font-size: 1.1rem;">Publish Article</button>
-            </form>
-          </section>
-        </div>
-        
-        <aside class="admin-sidebar">
-          <h2 class="section-title">Manage Content</h2>
-          <div class="daily-box">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-              <span style="font-weight: 600;">Live Articles</span>
-              <span class="badge">${state.news.length}</span>
-            </div>
-            <div style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
-              ${state.news.length > 0 ? state.news.map(n => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-                  <div style="overflow: hidden;">
-                    <p style="font-size: 0.9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;">${n.title}</p>
-                    <span style="font-size: 0.7rem; color: var(--text-muted);">${n.category} • ${n.date}</span>
-                  </div>
-                  <button onclick="deleteArticle('${n.id}')" style="color: #ff4444; font-size: 0.8rem; padding: 5px; background: none; border: none; cursor: pointer; font-weight: 600;">Delete</button>
-                </div>
-              `).join('') : '<p style="color: var(--text-muted); font-size: 0.9rem;">No articles published yet.</p>'}
-            </div>
-          </div>
-
-          <div class="daily-box" style="margin-top: 20px;">
-            <h3 style="margin-bottom: 15px;">System Tools</h3>
-            <button id="seed-btn" class="submit-btn" style="width: 100%; background: #444; margin-bottom: 10px;">Seed with Mock Data</button>
-            <p style="font-size: 0.7rem; color: var(--text-muted);">Use this to populate your site with initial example content.</p>
-          </div>
-        </aside>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('news-form').addEventListener('submit', handleNewsSubmit);
-  document.getElementById('seed-btn').addEventListener('click', seedDatabase);
 }
 
 async function seedDatabase() {
