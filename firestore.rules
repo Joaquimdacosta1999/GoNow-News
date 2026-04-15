@@ -2,43 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: news
-    // Document ID: auto-generated
-    // Fields:
-    //   - category: string (Politics, Football, Entertainment, Technology)
-    //   - title: string (max 200 chars)
-    //   - excerpt: string (max 500 chars)
-    //   - content: string (max 10000 chars)
-    //   - image: string (URL)
-    //   - date: string (YYYY-MM-DD)
-    //   - readTime: string
-    //   - authorUid: string
-    //   - createdAt: timestamp
-    //
-    // Collection: comments
-    // Document ID: auto-generated
-    // Fields:
-    //   - articleId: string
-    //   - text: string (max 1000 chars)
-    //   - date: string (YYYY-MM-DD)
-    //   - userEmail: string (optional)
-    //   - userUid: string
-    //   - createdAt: timestamp
-    //
-    // Collection: users
-    // Document ID: userId
-    // Fields:
-    //   - uid: string
-    //   - email: string
-    //   - role: string (admin, user)
-    //   - displayName: string
-    //
-    // ===============================================================
-
-    // ===============================================================
     // Helper Functions
     // ===============================================================
     
@@ -52,9 +15,8 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && 
-        (request.auth.token.email == "joaquimdacosta1999@gmail.com" || 
-         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
     }
     
     function isValidUrl(url) {
@@ -95,18 +57,18 @@ service cloud.firestore {
     }
 
     // ===============================================================
-    // Rules
+    // Rules - FIXED FOR ADMIN AND USER PERMISSIONS
     // ===============================================================
 
     match /news/{newsId} {
-      allow read: if true; // Publicly readable
+      allow read: if true;
       allow create: if isAdmin() && isValidNews(request.resource.data);
       allow update: if isAdmin() && isValidNews(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /comments/{commentId} {
-      allow read: if true; // Publicly readable
+      allow read: if true;
       allow create: if isAuthenticated() && isValidComment(request.resource.data);
       allow update: if isAuthenticated() && request.auth.uid == resource.data.userUid && isValidComment(request.resource.data);
       allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userUid || isAdmin());
