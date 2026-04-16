@@ -544,10 +544,10 @@ function renderAdmin(container) {
       </div>
     `;
 
-    const form = document.getElementById('news-form');
+    const form = container.querySelector('#news-form');
     if (form) form.addEventListener('submit', handleNewsSubmit);
     
-    const seedBtn = document.getElementById('seed-btn');
+    const seedBtn = container.querySelector('#seed-btn');
     if (seedBtn) seedBtn.addEventListener('click', seedDatabase);
 
   } catch (error) {
@@ -557,10 +557,12 @@ function renderAdmin(container) {
 }
 
 async function seedDatabase() {
+  const btn = document.querySelector('#seed-btn');
   if (!confirm('This will add all mock articles to your live database. Continue?')) return;
-  const btn = document.getElementById('seed-btn');
-  btn.disabled = true;
-  btn.innerText = 'Seeding...';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = 'Seeding...';
+  }
 
   try {
     const { newsData } = await import('./data.js');
@@ -589,24 +591,26 @@ async function handleNewsSubmit(e) {
   console.log('--- News Submission Started ---');
   e.preventDefault();
   
+  const form = e.target;
+  
   if (!state.user) {
     console.error('Submission failed: No user in state');
     alert('Error: You are not logged in. Please log in again.');
     return;
   }
 
-  const btn = e.target.querySelector('button');
+  const btn = form.querySelector('button[type="submit"]');
   const originalText = btn.innerText;
   btn.disabled = true;
   btn.innerText = 'Publishing...';
 
   try {
     console.log('Collecting form data...');
-    const title = document.getElementById('news-title').value;
-    const category = document.getElementById('news-category').value;
-    const image = document.getElementById('news-image').value;
-    const excerpt = document.getElementById('news-excerpt').value;
-    const content = document.getElementById('news-content').value;
+    const title = form.querySelector('#news-title').value;
+    const category = form.querySelector('#news-category').value;
+    const image = form.querySelector('#news-image').value;
+    const excerpt = form.querySelector('#news-excerpt').value;
+    const content = form.querySelector('#news-content').value;
 
     if (!title || !content) {
       throw new Error('Title and Content are required.');
