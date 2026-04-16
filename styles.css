@@ -929,3 +929,31 @@ footer {
 .text-primary { color: var(--primary-color); }
 .mt-4 { margin-top: 1rem; }
 .mb-4 { margin-bottom: 1rem; }
+
+/* Ad Styling */
+.ad-container {
+  margin: 30px 0;
+  padding: 15px;
+  background: var(--accent-color);
+  border-radius: 12px;
+  border: 1px dashed var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  min-height: 100px;
+}
+
+.ad-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 768px) {
+  .ad-container {
+    margin: 20px 0;
+  }
+}

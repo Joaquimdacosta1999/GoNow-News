@@ -309,11 +309,20 @@ function renderHome(container) {
           </div>
         </div>
         <div class="news-grid ${isList ? 'list-view' : ''}">
-          ${latest.length > 0 ? latest.map(item => createNewsCard(item)).join('') : '<p>No news available.</p>'}
+          ${latest.length > 0 ? latest.map((item, index) => {
+            const card = createNewsCard(item);
+            // Insert ad after every 3 articles
+            if (index > 0 && index % 3 === 0) {
+              return card + createAdUnit('9876543210');
+            }
+            return card;
+          }).join('') : '<p>No news available.</p>'}
         </div>
       </section>
 
       <aside class="sidebar">
+        ${createAdUnit('1234567890', 'rectangle')}
+        
         <div class="sidebar-section">
           <h2 class="section-title">Trending</h2>
           ${trending.map((item, i) => `
@@ -362,9 +371,16 @@ function renderCategory(container, title, items, type = 'news') {
       </div>
     </div>
     <div class="news-grid ${isList ? 'list-view' : ''}">
-      ${items.length > 0 ? items.map(item => {
-        if (type === 'news') return createNewsCard(item);
-        if (type === 'html') return createHtmlCard(item);
+      ${items.length > 0 ? items.map((item, index) => {
+        let html = '';
+        if (type === 'news') html = createNewsCard(item);
+        if (type === 'html') html = createHtmlCard(item);
+        
+        // Insert ad after 3rd item
+        if (index === 2) {
+          return html + createAdUnit('7777777777');
+        }
+        return html;
       }).join('') : '<p style="color: var(--text-muted); padding: 50px 0; text-align: center;">No articles found in this category yet.</p>'}
     </div>
   `;
@@ -393,6 +409,7 @@ function renderDaily(container) {
         </section>
       </div>
       <aside>
+        ${createAdUnit('5555555555', 'rectangle')}
         <h2 class="section-title">Daily Quote</h2>
         <div class="daily-box" style="text-align: center; padding: 40px;">
           <p style="font-size: 1.5rem; font-style: italic; margin-bottom: 20px;">"${quote.quote}"</p>
@@ -698,13 +715,30 @@ function renderAbout(container) {
         <li>✓ Vanilla HTML5/CSS3/JS</li>
         <li>✓ Firebase Authentication</li>
         <li>✓ Firestore Real-time Database</li>
-        <li>✓ LocalStorage Persistence</li>
+        <li>✓ Google AdSense Monetization</li>
       </ul>
     </div>
   `;
 }
 
 // Component Creators
+function createAdUnit(slot, format = 'auto') {
+  return `
+    <div class="ad-container">
+      <span class="ad-label">Advertisement</span>
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-1724173335946956"
+           data-ad-slot="${slot}"
+           data-ad-format="${format}"
+           data-full-width-responsive="true"></ins>
+      <script>
+           (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+  `;
+}
+
 function createNewsCard(item) {
   const isSaved = state.savedItems.some(s => s.id === item.id);
   return `
@@ -825,6 +859,7 @@ function renderModalContent(item, type, isSaved, initialComments) {
       ${item.readTime ? `<span>${item.readTime} read</span>` : ''}
     </div>
     <h1 class="detail-title">${item.title}</h1>
+    ${createAdUnit('1111111111', 'horizontal')}
     <div class="detail-body">
       ${item.content ? `<p>${item.content}</p>` : ''}
     </div>
@@ -839,6 +874,7 @@ function renderModalContent(item, type, isSaved, initialComments) {
       </div>
     </div>
     <section class="comments-section" style="margin-top: 40px; padding-top: 30px; border-top: 2px solid var(--border-color);">
+      ${createAdUnit('2222222222', 'horizontal')}
       <h3 id="comment-count" style="margin-bottom: 25px;">Comments (0)</h3>
       ${state.user ? `
         <div class="comment-form" style="background: var(--accent-color); padding: 20px; border-radius: 12px; margin-bottom: 30px;">
