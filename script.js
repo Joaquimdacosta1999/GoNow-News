@@ -40,6 +40,7 @@ const state = {
   userProfile: null,
   isAuthInitialized: false,
   news: [],
+  newsLoaded: false,
   savedItems: JSON.parse(localStorage.getItem('savedItems')) || [],
   learnedLessons: JSON.parse(localStorage.getItem('learnedLessons')) || [],
   comments: {},
@@ -122,8 +123,13 @@ function init() {
   const newsQuery = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
   onSnapshot(newsQuery, (snapshot) => {
     state.news = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    state.newsLoaded = true;
     handleRoute();
-  }, (error) => handleFirestoreError(error, OperationType.LIST, 'news'));
+  }, (error) => {
+    state.newsLoaded = true; // Still mark as loaded to clear spinner
+    handleFirestoreError(error, OperationType.LIST, 'news');
+    handleRoute();
+  });
 
   // Routing
   window.addEventListener('hashchange', handleRoute);
@@ -243,8 +249,31 @@ function renderPage(hash) {
 
 // Page Renderers
 function renderHome(container) {
-  const featured = state.news[0] || { title: 'No news yet', excerpt: 'Check back later!', image: 'https://picsum.photos/seed/gonow/800/450', category: 'General' };
-  const latest = state.news; // Show all news in latest section to keep it populated
+  if (!state.newsLoaded) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 100px 20px;">
+        <div class="loader" style="margin: 0 auto 20px;"></div>
+        <h2 style="font-size: 1.5rem;">Connecting to GoNow...</h2>
+        <p style="color: var(--text-muted);">Fetching the latest world news</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (state.news.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 100px 20px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); opacity: 0.5; margin-bottom: 20px;"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
+        <h1 style="font-size: 2rem; margin-bottom: 10px;">The news desk is currently quiet</h1>
+        <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto;">Our editors are working on new stories. Check back in a few moments for the latest updates.</p>
+        <a href="#admin" class="submit-btn" style="display: inline-block; margin-top: 30px; padding: 12px 30px;">Publish First Article</a>
+      </div>
+    `;
+    return;
+  }
+
+  const featured = state.news[0];
+  const latest = state.news;
   const trending = state.news.slice(0, 5);
   const happenings = dailyHappenings[0];
   const quote = dailyQuotes[0];
