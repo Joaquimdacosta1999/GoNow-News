@@ -119,7 +119,8 @@ function init() {
   });
 
   // Real-time News Listener
-  onSnapshot(collection(db, 'news'), (snapshot) => {
+  const newsQuery = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
+  onSnapshot(newsQuery, (snapshot) => {
     state.news = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     handleRoute();
   }, (error) => handleFirestoreError(error, OperationType.LIST, 'news'));
@@ -200,6 +201,10 @@ function handleRoute() {
 }
 
 function renderPage(hash) {
+  // Clear modal and search when navigating
+  modal.classList.remove('active');
+  searchOverlay.classList.remove('active');
+
   mainContent.innerHTML = '';
   const container = document.createElement('div');
   container.className = 'container fade-in';
@@ -232,33 +237,49 @@ function renderPage(hash) {
   }
 
   mainContent.appendChild(container);
+  // Re-attach listeners now that the content is in the DOM
+  attachCardListeners();
 }
 
 // Page Renderers
 function renderHome(container) {
   const featured = state.news[0] || { title: 'No news yet', excerpt: 'Check back later!', image: 'https://picsum.photos/seed/gonow/800/450', category: 'General' };
-  const latest = state.news.slice(1, 7);
+  const latest = state.news; // Show all news in latest section to keep it populated
   const trending = state.news.slice(0, 5);
-  const quote = dailyQuotes[0];
   const happenings = dailyHappenings[0];
+  const quote = dailyQuotes[0];
+  const isList = state.viewMode === 'list';
 
   container.innerHTML = `
     <section class="hero">
-      <div class="hero-card" onclick="${featured.id ? `window.location.hash = '#article/${featured.id}'` : ''}">
-        <img src="${featured.image}" alt="${featured.title}" class="hero-img" loading="lazy">
-        <div class="hero-overlay"></div>
+      <div class="hero-card" onclick="${featured.id ? `window.location.hash = '#article/${featured.id}'` : ''}" style="cursor: pointer;">
+        <div class="hero-img-wrapper">
+          <img src="${featured.image}" alt="${featured.title}" class="hero-img" loading="lazy">
+        </div>
         <div class="hero-content">
           <span class="badge">${featured.category}</span>
           <h1 class="hero-title">${featured.title}</h1>
-          <p>${featured.excerpt}</p>
+          <p class="hero-description">${featured.excerpt}</p>
         </div>
       </div>
     </section>
 
     <div class="main-grid">
       <section class="latest-news">
-        <h2 class="section-title">Latest News</h2>
-        <div class="news-grid list-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+          <h2 class="section-title" style="margin-bottom: 0;">Latest News</h2>
+          <div class="view-toggle">
+            <button class="toggle-btn ${!isList ? 'active' : ''}" onclick="toggleViewMode('grid')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+              Grid
+            </button>
+            <button class="toggle-btn ${isList ? 'active' : ''}" onclick="toggleViewMode('list')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
+              List
+            </button>
+          </div>
+        </div>
+        <div class="news-grid ${isList ? 'list-view' : ''}">
           ${latest.length > 0 ? latest.map(item => createNewsCard(item)).join('') : '<p>No news available.</p>'}
         </div>
       </section>
@@ -292,15 +313,13 @@ function renderHome(container) {
       </aside>
     </div>
   `;
-
-  attachCardListeners();
 }
 
 function renderCategory(container, title, items, type = 'news') {
   const isList = state.viewMode === 'list';
   
   container.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
       <h1 class="section-title" style="margin-bottom: 0;">${title}</h1>
       <div class="view-toggle">
         <button class="toggle-btn ${!isList ? 'active' : ''}" onclick="toggleViewMode('grid')">
@@ -317,10 +336,9 @@ function renderCategory(container, title, items, type = 'news') {
       ${items.length > 0 ? items.map(item => {
         if (type === 'news') return createNewsCard(item);
         if (type === 'html') return createHtmlCard(item);
-      }).join('') : '<p>No items found in this category.</p>'}
+      }).join('') : '<p style="color: var(--text-muted); padding: 50px 0; text-align: center;">No articles found in this category yet.</p>'}
     </div>
   `;
-  attachCardListeners();
 }
 
 function renderDaily(container) {
