@@ -215,33 +215,49 @@ function renderPage(hash) {
   const container = document.createElement('div');
   container.className = 'container fade-in';
 
+  let pageTitle = 'GoNow | Latest News';
+
   if (hash === '#home') {
     renderHome(container);
   } else if (hash === '#politics') {
+    pageTitle = 'Politics News | GoNow';
     renderCategory(container, 'Politics', state.news.filter(n => n.category === 'Politics'));
   } else if (hash === '#football') {
+    pageTitle = 'Football News & Updates | GoNow';
     renderCategory(container, 'Football', state.news.filter(n => n.category === 'Football'));
   } else if (hash === '#entertainment') {
+    pageTitle = 'Entertainment & Trends | GoNow';
     renderCategory(container, 'Entertainment', state.news.filter(n => n.category === 'Entertainment'));
   } else if (hash === '#technology') {
+    pageTitle = 'Tech News & Innovation | GoNow';
     renderCategory(container, 'Technology', state.news.filter(n => n.category === 'Technology'));
   } else if (hash === '#html') {
+    pageTitle = 'Learn HTML Daily | GoNow';
     renderCategory(container, 'Learn HTML Daily', htmlLessons, 'html');
   } else if (hash === '#daily') {
+    pageTitle = 'Daily Digest | GoNow';
     renderDaily(container);
   } else if (hash === '#saved') {
+    pageTitle = 'Your Saved Articles | GoNow';
     renderSaved(container);
   } else if (hash === '#about') {
+    pageTitle = 'About Us | GoNow News Portal';
     renderAbout(container);
   } else if (hash === '#admin') {
+    pageTitle = 'Admin Board | GoNow';
     renderAdmin(container);
   } else if (hash.startsWith('#article/')) {
     const id = hash.split('/')[1];
     const article = state.news.find(n => n.id === id);
-    if (article) openDetail(id, 'news');
-    else window.location.hash = '#home';
+    if (article) {
+      pageTitle = `${article.title} | GoNow`;
+      openDetail(id, 'news');
+    } else {
+      window.location.hash = '#home';
+    }
   }
 
+  document.title = pageTitle;
   mainContent.appendChild(container);
   // Re-attach listeners now that the content is in the DOM
   attachCardListeners();
