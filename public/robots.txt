@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://gen-lang-client-0507584295.web.app/sitemap.xml
+Sitemap: https://go-now-news.vercel.app/sitemap.xml
