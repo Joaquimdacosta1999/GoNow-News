@@ -45,6 +45,7 @@ const state = {
   newsLoaded: false,
   savedItems: JSON.parse(localStorage.getItem('savedItems')) || [],
   learnedLessons: JSON.parse(localStorage.getItem('learnedLessons')) || [],
+  wikipediaEvents: [],
   comments: {},
   currentRoute: window.location.hash || '#home',
   viewMode: localStorage.getItem('viewMode') || 'grid'
@@ -121,6 +122,9 @@ function init() {
     handleRoute();
   });
 
+  // Fetch Wikipedia Events
+  fetchWikipediaEvents();
+
   // Real-time News Listener
   const newsQuery = query(collection(db, 'news'), orderBy('createdAt', 'desc'));
   onSnapshot(newsQuery, (snapshot) => {
@@ -141,6 +145,28 @@ function init() {
     if (e.target === modal) modal.classList.remove('active');
     if (e.target === searchOverlay) searchOverlay.classList.remove('active');
   });
+}
+
+async function fetchWikipediaEvents() {
+  try {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    
+    // Wikipedia API for "On This Day"
+    const response = await fetch(`https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${month}/${day}`);
+    const data = await response.json();
+    
+    if (data.events && data.events.length > 0) {
+      // Pick top 3-5 events
+      state.wikipediaEvents = data.events.slice(0, 5).map(e => `${e.year}: ${e.text}`);
+      console.log('Wikipedia events loaded:', state.wikipediaEvents.length);
+      handleRoute(); // Re-render to show events
+    }
+  } catch (error) {
+    console.error('Error fetching Wikipedia events:', error);
+    // Fallback happens naturally as we check for wikipediaEvents.length
+  }
 }
 
 // Auth Logic
@@ -293,7 +319,7 @@ function renderHome(container) {
   const featured = state.news[0];
   const latest = state.news;
   const trending = state.news.slice(0, 5);
-  const happenings = dailyHappenings[0];
+  const happeningsList = state.wikipediaEvents.length > 0 ? state.wikipediaEvents : dailyHappenings[0].events;
   const quote = dailyQuotes[0];
   const isList = state.viewMode === 'list';
 
@@ -356,9 +382,9 @@ function renderHome(container) {
 
         <div class="sidebar-section">
           <div class="daily-box">
-            <h3>Daily Happenings</h3>
+            <h3>Daily Happenings (via Wikipedia)</h3>
             <ul class="daily-list">
-              ${happenings.events.map(e => `<li>${e}</li>`).join('')}
+              ${happeningsList.map(e => `<li>${e}</li>`).join('')}
             </ul>
             <div class="quote-box">
               <p class="quote-text">"${quote.quote}"</p>
@@ -406,7 +432,7 @@ function renderCategory(container, title, items, type = 'news') {
 
 function renderDaily(container) {
   const quote = dailyQuotes[Math.floor(Math.random() * dailyQuotes.length)];
-  const happenings = dailyHappenings[0];
+  const happeningsList = state.wikipediaEvents.length > 0 ? state.wikipediaEvents : dailyHappenings[0].events;
   const todayLesson = htmlLessons[0];
 
   container.innerHTML = `
@@ -418,10 +444,10 @@ function renderDaily(container) {
           ${createHtmlCard(todayLesson)}
         </section>
         <section class="mt-4">
-          <h2 class="section-title">On This Day</h2>
+          <h2 class="section-title">On This Day (via Wikipedia)</h2>
           <div class="daily-box">
             <ul class="daily-list">
-              ${happenings.events.map(e => `<li style="font-size: 1.1rem; padding: 20px 0;">${e}</li>`).join('')}
+              ${happeningsList.map(e => `<li style="font-size: 1.1rem; padding: 20px 0;">${e}</li>`).join('')}
             </ul>
           </div>
         </section>
