@@ -27,6 +27,8 @@ import {
   OperationType
 } from './firebase.ts';
 
+import { marked } from 'marked';
+
 import { 
   htmlLessons, 
   dailyHappenings, 
@@ -567,7 +569,7 @@ function renderAdmin(container) {
                 </div>
                 
                 <div style="margin-bottom: 25px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Full Content</label>
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Full Content (Supports Markdown: **bold**, *italic*, # Heading, - List)</label>
                   <textarea id="news-content" class="comment-input" placeholder="Write the full article here..." rows="12" required></textarea>
                 </div>
                 
@@ -877,7 +879,7 @@ function renderModalContent(item, type, isSaved, initialComments) {
     <h1 class="detail-title">${item.title}</h1>
     ${createAdUnit('1111111111', 'horizontal')}
     <div class="detail-body">
-      ${item.content ? `<p>${item.content}</p>` : ''}
+      ${item.content ? `<div class="markdown-content">${marked.parse(item.content)}</div>` : ''}
     </div>
     <div class="card-footer mt-4">
       <div style="display: flex; gap: 15px;">
