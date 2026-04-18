@@ -72,36 +72,43 @@ async function syncAllNews() {
   const categoryConfigs = {
     'Politics': [
       'https://moxie.foxnews.com/feed-publisher/politics.xml',
+      'https://www.breitbart.com/politics/feed/',
       'https://www.washingtontimes.com/rss/headlines/news/politics/',
+      'https://www.washingtonexaminer.com/feed/politics/',
       'https://nypost.com/politics/feed/'
     ],
     'Football': [
       'https://www.skysports.com/rss/12040',
-      'https://www.football.london/rss.xml'
+      'https://www.football.london/rss.xml',
+      'https://www.sportsmole.co.uk/football/index.rss'
     ],
     'Entertainment': [
       'https://moxie.foxnews.com/feed-publisher/entertainment.xml',
+      'https://www.breitbart.com/entertainment/feed/',
+      'https://www.washingtonexaminer.com/feed/entertainment/',
       'https://nypost.com/entertainment/feed/'
     ],
     'Technology': [
       'https://moxie.foxnews.com/feed-publisher/tech.xml',
-      'https://www.washingtontimes.com/rss/headlines/news/technology/'
+      'https://www.washingtontimes.com/rss/headlines/news/technology/',
+      'https://www.washingtontimes.com/rss/headlines/business/technology/'
     ]
   };
 
-  let allAutoNews = [];
+  let allFreshAutoNews = [];
 
   for (const [name, urls] of Object.entries(categoryConfigs)) {
-    let success = false;
+    let categoryNews = [];
     for (const url of urls) {
+      if (categoryNews.length >= 15) break; 
       try {
-        const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&api_key=oyebf5p7zpjz2zmjzmxu3a2jqzvx5v5x5v5v5v5v`); // Added a public fallback key or just standard fetch
+        const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`);
         const data = await response.json();
-        if (data.status === 'ok' && data.items.length > 0) {
+        if (data.status === 'ok' && data.items && data.items.length > 0) {
           const items = data.items.map((item, index) => ({
-            id: `auto-${name.toLowerCase()}-${index}-${Math.random().toString(36).substr(2, 5)}`,
+            id: `auto-${name.toLowerCase()}-${Math.random().toString(36).substr(2, 9)}`,
             title: item.title,
-            excerpt: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 140) + '...' : 'Latest global news and analysis.',
+            excerpt: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...' : 'Latest world news and analysis.',
             content: item.content || item.description,
             image: item.thumbnail || item.enclosure?.link || getDefaultImage(name),
             category: name,
@@ -112,21 +119,20 @@ async function syncAllNews() {
             isAuto: true,
             source: item.link
           }));
-          allAutoNews = [...allAutoNews, ...items];
-          success = true;
-          break; // Stop after first successful feed for this category
+          categoryNews = [...categoryNews, ...items];
         }
       } catch (e) {
         console.warn(`Failed to fetch ${name} from ${url}`, e);
       }
     }
+    allFreshAutoNews = [...allFreshAutoNews, ...categoryNews];
   }
 
-  if (allAutoNews.length > 0) {
-    // Sort by most recent first
-    allAutoNews.sort((a, b) => b.timestamp - a.timestamp);
-    state.autoNews = allAutoNews;
-    localStorage.setItem('autoNewsCache', JSON.stringify(allAutoNews));
+  if (allFreshAutoNews.length > 0) {
+    allFreshAutoNews.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    state.autoNews = allFreshAutoNews;
+    localStorage.setItem('autoNewsCache', JSON.stringify(allFreshAutoNews));
+    state.newsLoaded = true;
   }
   
   if (pathRoutes.includes(state.currentRoute)) {
@@ -407,26 +413,56 @@ function renderHome(container) {
   const knowledge = thingsToKnow[0];
   const isList = state.viewMode === 'list';
 
-  // Combine and sort ALL news sources by timestamp
-  const allAvailableNews = [...state.news, ...state.autoNews].sort((a, b) => {
-    const timeA = a.timestamp || new Date(a.date).getTime() || 0;
-    const timeB = b.timestamp || new Date(b.date).getTime() || 0;
-    return timeB - timeA;
+  // BALANCED FEED LOGIC: Ensure all categories are represented on home page
+  const newsByCategory = {
+    'Politics': [],
+    'Football': [],
+    'Entertainment': [],
+    'Technology': []
+  };
+
+  const allSourceNews = [...state.news, ...state.autoNews];
+  allSourceNews.forEach(article => {
+    if (newsByCategory[article.category]) {
+      newsByCategory[article.category].push(article);
+    }
   });
 
-  if (allAvailableNews.length === 0) {
+  // Sort each category by date
+  Object.keys(newsByCategory).forEach(cat => {
+    newsByCategory[cat].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  });
+
+  // INTERLEAVE: Gather news for the harmonic home feed
+  const harmonicNews = [];
+  let maxItems = 20; // total news on home
+  let i = 0;
+  while (harmonicNews.length < maxItems) {
+    let addedAny = false;
+    Object.keys(newsByCategory).forEach(cat => {
+      if (newsByCategory[cat][i]) {
+        harmonicNews.push(newsByCategory[cat][i]);
+        addedAny = true;
+      }
+    });
+    if (!addedAny) break;
+    i++;
+  }
+
+  if (harmonicNews.length === 0) {
     if (!state.newsLoaded) {
       container.innerHTML = `
         <div style="text-align: center; padding: 100px 20px;">
           <div class="loader" style="margin: 0 auto 20px;"></div>
-          <h2 style="font-size: 1.5rem;">Connecting to GoNow...</h2>
-          <p style="color: var(--text-muted);">Fetching the latest world news</p>
+          <h2 style="font-size: 1.5rem;">Connecting to GoNow Global News...</h2>
+          <p style="color: var(--text-muted);">Fetching conservative world-wide perspectives</p>
         </div>
       `;
     } else {
       container.innerHTML = `
         <div style="text-align: center; padding: 100px 20px;">
-          <h1 style="font-size: 2rem;">The news desk is currently quiet</h1>
+          <h1 style="font-size: 2rem;">Connecting to Global Feeds...</h1>
+          <p>Please wait a few seconds or check your connection.</p>
           <a href="/admin" class="submit-btn" style="display: inline-block; margin-top: 30px;">Publish First Article</a>
         </div>
       `;
@@ -434,9 +470,9 @@ function renderHome(container) {
     return;
   }
 
-  const featured = allAvailableNews[0];
-  const latest = allAvailableNews.slice(1);
-  const trending = allAvailableNews.slice(0, 5);
+  const featured = harmonicNews[0];
+  const latest = harmonicNews.slice(1);
+  const trending = [...allSourceNews].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 5);
 
   container.innerHTML = `
     <section class="hero magazine-hero">
