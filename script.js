@@ -414,40 +414,44 @@ function renderPage(path) {
   if (path === '/home') {
     renderHome(container);
   } else if (path === '/politics') {
-    pageTitle = 'Politics News & Updates | GoNow';
-    pageDescription = 'Stay updated with the latest conservative politics news, global analysis, and political trends on GoNow.';
+    pageTitle = 'Politics News Today: Breaking Global Updates | GoNow';
+    pageDescription = 'Stay informed with the latest global politics news, in-depth analysis, and trending reports on GoNow. Your clean portal for political truth.';
+    pageImage = getDefaultImage('Politics');
     const combined = [...state.news.filter(n => n.category === 'Politics'), ...state.autoNews.filter(n => n.category === 'Politics')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Politics', combined);
   } else if (path === '/football') {
-    pageTitle = 'Football News & Updates | GoNow';
-    pageDescription = 'Get real-time football scores, match highlights, and latest transfer news from around the world on GoNow.';
+    pageTitle = 'Football News & Scores: Live Match Updates | GoNow';
+    pageDescription = 'Get real-time football scores, match highlights, and latest transfer news from elite leagues worldwide on GoNow. Fast and ad-light.';
+    pageImage = getDefaultImage('Football');
     const combined = [...state.news.filter(n => n.category === 'Football'), ...state.autoNews.filter(n => n.category === 'Football')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Football', combined);
   } else if (path === '/entertainment') {
-    pageTitle = 'Entertainment News & Updates | GoNow';
-    pageDescription = 'Latest entertainment news, celebrity updates, and trending stories worldwide. Pure entertainment on GoNow.';
+    pageTitle = 'Entertainment News: Celebrity, Movies & Music Trends | GoNow';
+    pageDescription = 'The latest entertainment news, celebrity gossip, and trending pop culture stories worldwide. Stay entertained with GoNow.';
+    pageImage = getDefaultImage('Entertainment');
     const combined = [...state.news.filter(n => n.category === 'Entertainment'), ...state.autoNews.filter(n => n.category === 'Entertainment')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Entertainment', combined);
   } else if (path === '/technology') {
-    pageTitle = 'Technology News & Updates | GoNow';
-    pageDescription = 'Explore the latest in technology, tech innovations, and future gadgets. stay ahead with GoNow Tech.';
+    pageTitle = 'Technology News: Innovations, Gadgets & Tech Reviews | GoNow';
+    pageDescription = 'Explore the cutting edge of technology, future gadgets, and tech innovations. Your daily dose of technology updates on GoNow.';
+    pageImage = getDefaultImage('Technology');
     const combined = [...state.news.filter(n => n.category === 'Technology'), ...state.autoNews.filter(n => n.category === 'Technology')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Technology', combined);
   } else if (path === '/things-to-know') {
-    pageTitle = 'Things To Know | GoNow';
-    pageDescription = 'Expand your knowledge with interesting facts, deep dives, and things you should know today on GoNow.';
+    pageTitle = 'Things To Know: Facts & Deep Dives | GoNow';
+    pageDescription = 'Expand your horizons with fascinating facts and deep dives into history, science, and more on the GoNow Knowledge Desk.';
     renderCategory(container, 'Things To Know', thingsToKnow, 'knowledge');
   } else if (path === '/daily') {
-    pageTitle = 'Daily Digest | GoNow';
-    pageDescription = 'Our daily digest of the most important stories, historical events, and quotes to start your day.';
+    pageTitle = 'Daily Digest: Today\'s Top Stories & History | GoNow';
+    pageDescription = 'A curated daily digest of critical world news, important historical milestones, and inspiring quotes to start your morning right.';
     renderDaily(container);
   } else if (path === '/saved') {
-    pageTitle = 'Your Saved Articles | GoNow';
-    pageDescription = 'Access your personal library of saved news, tech, and football articles on GoNow.';
+    pageTitle = 'Personal Library: Your Saved Articles | GoNow';
+    pageDescription = 'Access and manage your personal collection of saved news stories, tech updates, and football transfer news on GoNow.';
     renderSaved(container);
   } else if (path === '/about') {
-    pageTitle = 'About Us | GoNow News Portal';
-    pageDescription = 'Learn more about GoNow, our mission to provide fast, clean, and ad-light news to the world.';
+    pageTitle = 'About GoNow: Our News Mission & Vision | GoNow';
+    pageDescription = 'Discover how GoNow is redefining news consumption with a fast, clean, and ad-light interface dedicated to the truth.';
     renderAbout(container);
   } else if (path === '/admin') {
     pageTitle = 'Admin Board | GoNow';
@@ -462,10 +466,15 @@ function renderPage(path) {
     const id = path.split('/')[2];
     const article = [...state.news, ...state.autoNews].find(n => n.id === id);
     if (article) {
-      pageTitle = `${article.title} | GoNow`;
-      pageDescription = article.excerpt ? article.excerpt.substring(0, 160) : pageDescription;
+      pageTitle = `${article.title} | GoNow News`;
+      // Clean tags from description if any and limit to 155 chars for SEO
+      const cleanDesc = article.excerpt ? article.excerpt.replace(/<[^>]*>?/gm, '') : pageDescription;
+      pageDescription = cleanDesc.substring(0, 155) + (cleanDesc.length > 155 ? '...' : '');
       pageImage = article.image || pageImage;
       pageType = 'article';
+      
+      // Render home in background so the page isn't empty behind the modal
+      renderHome(container);
       openDetail(id, 'news');
       injectArticleSchema(article);
     } else {
@@ -497,7 +506,7 @@ function renderPage(path) {
   setMeta('meta[name="twitter:title"]', 'content', pageTitle);
   setMeta('meta[name="twitter:description"]', 'content', pageDescription);
   setMeta('meta[name="twitter:image"]', 'content', pageImage);
-  setMeta('meta[property="twitter:url"]', 'content', currentUrl);
+  setMeta('meta[name="twitter:url"]', 'content', currentUrl);
 
   mainContent.appendChild(container);
   // Re-attach listeners now that the content is in the DOM

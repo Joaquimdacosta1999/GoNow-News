@@ -73,7 +73,5 @@ To replace the mock data with real news:
    ```
 3. Update the `renderPage` logic to use the fetched data instead of `newsData`.
 
-<!-- Trigger Vercel deploy -->
-
 ---
 Built with ❤️ by GoNow Team
