@@ -395,36 +395,45 @@ function renderPage(path) {
   container.className = 'container fade-in';
 
   let pageTitle = 'GoNow | Latest News';
+  let pageDescription = 'GoNow — your daily dose of news, football scores, tech, and entertainment. Fast, clean, ad-light.';
 
   if (path === '/home') {
     renderHome(container);
   } else if (path === '/politics') {
     pageTitle = 'Politics News | GoNow';
+    pageDescription = 'Stay updated with the latest conservative politics news, global analysis, and political trends on GoNow.';
     const combined = [...state.news.filter(n => n.category === 'Politics'), ...state.autoNews.filter(n => n.category === 'Politics')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Politics', combined);
   } else if (path === '/football') {
     pageTitle = 'Football News & Updates | GoNow';
+    pageDescription = 'Get real-time football scores, match highlights, and latest transfer news from around the world on GoNow.';
     const combined = [...state.news.filter(n => n.category === 'Football'), ...state.autoNews.filter(n => n.category === 'Football')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Football', combined);
   } else if (path === '/entertainment') {
     pageTitle = 'Entertainment & Trends | GoNow';
+    pageDescription = 'Latest entertainment news, celebrity updates, and trending stories worldwide. Pure entertainment on GoNow.';
     const combined = [...state.news.filter(n => n.category === 'Entertainment'), ...state.autoNews.filter(n => n.category === 'Entertainment')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Entertainment', combined);
   } else if (path === '/technology') {
     pageTitle = 'Tech News & Innovation | GoNow';
+    pageDescription = 'Explore the latest in technology, tech innovations, and future gadgets. stay ahead with GoNow Tech.';
     const combined = [...state.news.filter(n => n.category === 'Technology'), ...state.autoNews.filter(n => n.category === 'Technology')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Technology', combined);
   } else if (path === '/things-to-know') {
     pageTitle = 'Interesting Things To Know | GoNow';
+    pageDescription = 'Expand your knowledge with interesting facts, deep dives, and things you should know today on GoNow.';
     renderCategory(container, 'Things To Know', thingsToKnow, 'knowledge');
   } else if (path === '/daily') {
     pageTitle = 'Daily Digest | GoNow';
+    pageDescription = 'Our daily digest of the most important stories, historical events, and quotes to start your day.';
     renderDaily(container);
   } else if (path === '/saved') {
     pageTitle = 'Your Saved Articles | GoNow';
+    pageDescription = 'Access your personal library of saved news, tech, and football articles on GoNow.';
     renderSaved(container);
   } else if (path === '/about') {
     pageTitle = 'About Us | GoNow News Portal';
+    pageDescription = 'Learn more about GoNow, our mission to provide fast, clean, and ad-light news to the world.';
     renderAbout(container);
   } else if (path === '/admin') {
     pageTitle = 'Admin Board | GoNow';
@@ -434,6 +443,7 @@ function renderPage(path) {
     const article = [...state.news, ...state.autoNews].find(n => n.id === id);
     if (article) {
       pageTitle = `${article.title} | GoNow`;
+      pageDescription = article.excerpt ? article.excerpt.substring(0, 160) : pageDescription;
       openDetail(id, 'news');
     } else {
       navigateTo('/home');
@@ -441,6 +451,17 @@ function renderPage(path) {
   }
 
   document.title = pageTitle;
+  const metaDescription = document.querySelector('meta[name="description"]');
+  if (metaDescription) {
+    metaDescription.setAttribute('content', pageDescription);
+  }
+  
+  // Also update OG and Twitter descriptions for social SEO
+  ['og:description', 'twitter:description'].forEach(prop => {
+    const meta = document.querySelector(`meta[property="${prop}"]`);
+    if (meta) meta.setAttribute('content', pageDescription);
+  });
+
   mainContent.appendChild(container);
   // Re-attach listeners now that the content is in the DOM
   attachCardListeners();
