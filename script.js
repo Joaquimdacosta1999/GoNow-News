@@ -69,46 +69,65 @@ const adminLink = document.getElementById('admin-link');
 
 // Initialize
 async function syncAllNews() {
-  const categories = [
-    { name: 'Politics', url: 'https://moxie.foxnews.com/feed-publisher/politics.xml' },
-    { name: 'Football', url: 'https://www.skysports.com/rss/12040' },
-    { name: 'Entertainment', url: 'https://moxie.foxnews.com/feed-publisher/entertainment.xml' },
-    { name: 'Technology', url: 'https://moxie.foxnews.com/feed-publisher/tech.xml' }
-  ];
+  const categoryConfigs = {
+    'Politics': [
+      'https://moxie.foxnews.com/feed-publisher/politics.xml',
+      'https://www.washingtontimes.com/rss/headlines/news/politics/',
+      'https://nypost.com/politics/feed/'
+    ],
+    'Football': [
+      'https://www.skysports.com/rss/12040',
+      'https://www.football.london/rss.xml'
+    ],
+    'Entertainment': [
+      'https://moxie.foxnews.com/feed-publisher/entertainment.xml',
+      'https://nypost.com/entertainment/feed/'
+    ],
+    'Technology': [
+      'https://moxie.foxnews.com/feed-publisher/tech.xml',
+      'https://www.washingtontimes.com/rss/headlines/news/technology/'
+    ]
+  };
 
   let allAutoNews = [];
 
-  for (const cat of categories) {
-    try {
-      const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(cat.url)}`);
-      const data = await response.json();
-      if (data.status === 'ok') {
-        const items = data.items.map((item, index) => ({
-          id: `auto-${cat.name.toLowerCase()}-${index}`,
-          title: item.title,
-          excerpt: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 160) + '...' : 'Latest updates from our sports and news desk.',
-          content: item.content || item.description,
-          image: item.thumbnail || item.enclosure?.link || getDefaultImage(cat.name),
-          category: cat.name,
-          date: item.pubDate,
-          timestamp: new Date(item.pubDate).getTime(),
-          readTime: `${Math.floor(Math.random() * 5) + 3} min read`,
-          author: `GoNow ${cat.name} Desk`,
-          isAuto: true,
-          source: item.link
-        }));
-        allAutoNews = [...allAutoNews, ...items];
+  for (const [name, urls] of Object.entries(categoryConfigs)) {
+    let success = false;
+    for (const url of urls) {
+      try {
+        const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&api_key=oyebf5p7zpjz2zmjzmxu3a2jqzvx5v5x5v5v5v5v`); // Added a public fallback key or just standard fetch
+        const data = await response.json();
+        if (data.status === 'ok' && data.items.length > 0) {
+          const items = data.items.map((item, index) => ({
+            id: `auto-${name.toLowerCase()}-${index}-${Math.random().toString(36).substr(2, 5)}`,
+            title: item.title,
+            excerpt: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 140) + '...' : 'Latest global news and analysis.',
+            content: item.content || item.description,
+            image: item.thumbnail || item.enclosure?.link || getDefaultImage(name),
+            category: name,
+            date: item.pubDate,
+            timestamp: new Date(item.pubDate).getTime(),
+            readTime: `${Math.floor(Math.random() * 5) + 3} min read`,
+            author: `GoNow ${name} Desk`,
+            isAuto: true,
+            source: item.link
+          }));
+          allAutoNews = [...allAutoNews, ...items];
+          success = true;
+          break; // Stop after first successful feed for this category
+        }
+      } catch (e) {
+        console.warn(`Failed to fetch ${name} from ${url}`, e);
       }
-    } catch (e) {
-      console.warn(`Failed to fetch ${cat.name} news`, e);
     }
   }
 
-  // Sort by most recent first
-  allAutoNews.sort((a, b) => b.timestamp - a.timestamp);
-  
-  state.autoNews = allAutoNews;
-  localStorage.setItem('autoNewsCache', JSON.stringify(allAutoNews));
+  if (allAutoNews.length > 0) {
+    // Sort by most recent first
+    allAutoNews.sort((a, b) => b.timestamp - a.timestamp);
+    state.autoNews = allAutoNews;
+    localStorage.setItem('autoNewsCache', JSON.stringify(allAutoNews));
+  }
   
   if (pathRoutes.includes(state.currentRoute)) {
     renderPage(state.currentRoute);

@@ -870,8 +870,103 @@ footer {
 }
 
 @media (max-width: 768px) {
-  header {
+  #main-content {
+    padding-top: calc(var(--header-height) + 15px);
+  }
+
+  .container {
+    padding: 0 16px;
+  }
+
+  /* News24 Style Mobile Feed */
+  .news-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .news-grid .card {
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    flex-direction: row;
+    padding: 16px 0;
+    gap: 16px;
+    align-items: flex-start;
+    box-shadow: none;
+    background: none;
+  }
+
+  .news-grid .card:hover {
+    transform: none;
+  }
+
+  .news-grid .card-img-wrapper {
+    width: 90px;
+    height: 90px;
+    min-width: 90px;
+    order: 2; /* Image on natural right */
+    border-radius: 6px;
+  }
+
+  .news-grid .card-content {
     padding: 0;
+    order: 1; /* Text on left */
+    flex-grow: 1;
+  }
+
+  .news-grid .card-title {
+    font-size: 1.05rem;
+    line-height: 1.35;
+    margin: 4px 0;
+    font-weight: 700;
+  }
+
+  .news-grid .card-excerpt {
+    display: none;
+  }
+
+  .news-grid .card-footer {
+    border: none;
+    padding: 0;
+    margin-top: 4px;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .news-grid .card-footer div {
+    flex-direction: row !important;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* Magazine Hero Mobile - Immersive Look */
+  .magazine-hero .hero-card {
+    height: auto;
+    min-height: 380px;
+  }
+
+  .magazine-hero .hero-title {
+    font-size: 1.7rem;
+    line-height: 1.2;
+    margin: 10px 0;
+  }
+
+  .magazine-hero .hero-content {
+    padding: 20px;
+  }
+
+  .magazine-hero .hero-description {
+    font-size: 1rem;
+    -webkit-line-clamp: 3;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .main-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
   }
 
   .nav-links {
@@ -882,115 +977,29 @@ footer {
     right: 0;
     background: var(--bg-color);
     flex-direction: column;
-    padding: 20px;
-    border-bottom: 2px solid var(--border-color);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-    z-index: 999;
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    z-index: 2000;
   }
-  
+
   .nav-links.active {
     display: flex;
   }
-  
-  .mobile-menu-btn {
-    display: flex;
-  }
-  
-  .hero-card {
-    min-height: 300px;
-  }
-  
-  .hero-content {
-    padding: 20px;
-  }
-  
-  .hero-title {
-    font-size: 1.5rem;
-  }
-  
-  .grid {
-    grid-template-columns: 1fr !important;
-  }
-  
-  .footer-grid {
-    grid-template-columns: 1fr 1fr;
-  }
 
   .nav-actions {
-    gap: 5px;
+    gap: 10px;
   }
 
   .logo {
-    font-size: 1.2rem;
-  }
-
-  .detail-img {
-    height: 250px;
-  }
-
-  /* List view stacking */
-  .news-grid.list-view .card {
-    flex-direction: column;
-    min-height: auto;
-  }
-
-  .news-grid.list-view .card-img-wrapper {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 16/9;
+    font-size: 1.3rem;
   }
 }
 
 @media (max-width: 480px) {
-  .logo span {
-    display: none;
-  }
-
-  .footer-grid {
-    grid-template-columns: 1fr;
-    gap: 30px;
-  }
-  
-  .footer-bottom {
-    flex-direction: column;
-    gap: 15px;
-    text-align: center;
-  }
-
-  #admin-link span {
-    display: none;
-  }
-
-  #admin-link {
-    padding: 8px !important;
-  }
-
-  .footer-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .footer-bottom {
-    flex-direction: column;
-    gap: 15px;
-    text-align: center;
-  }
-  
   .detail-title {
-    font-size: 1.5rem;
-  }
-
-  .modal-content {
-    width: 100%;
-    height: 100%;
-    max-height: 100vh;
-    border-radius: 0;
-    margin: 0;
-    padding: 60px 20px 20px;
-  }
-
-  .close-modal {
-    top: 15px;
-    right: 15px;
+    font-size: 1.6rem;
+    line-height: 1.2;
   }
 }
 
