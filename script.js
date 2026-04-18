@@ -49,7 +49,7 @@ const state = {
   comments: {},
   currentRoute: window.location.pathname === '/' ? '/home' : window.location.pathname,
   viewMode: localStorage.getItem('viewMode') || 'grid',
-  autoFootballNews: []
+  autoNews: JSON.parse(localStorage.getItem('autoNewsCache')) || []
 };
 
 // DOM Elements
@@ -68,31 +68,63 @@ const authBtn = document.getElementById('auth-btn');
 const adminLink = document.getElementById('admin-link');
 
 // Initialize
-async function fetchFootballNews() {
-  try {
-    const response = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.skysports.com/rss/12040');
-    const data = await response.json();
-    if (data.status === 'ok') {
-      state.autoFootballNews = data.items.map((item, index) => ({
-        id: 'auto-' + index,
-        title: item.title,
-        excerpt: item.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...',
-        content: item.content || item.description,
-        image: item.thumbnail || item.enclosure?.link || 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2070&auto=format&fit=crop',
-        category: 'Football',
-        date: new Date(item.pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        readTime: '3 min read',
-        author: 'GoNow Sports News',
-        isAuto: true,
-        source: item.link
-      }));
-      if (state.currentRoute === '/football' || state.currentRoute === '/home') {
-        renderPage(state.currentRoute);
+async function syncAllNews() {
+  const categories = [
+    { name: 'Politics', url: 'https://moxie.foxnews.com/feed-publisher/politics.xml' },
+    { name: 'Football', url: 'https://www.skysports.com/rss/12040' },
+    { name: 'Entertainment', url: 'https://moxie.foxnews.com/feed-publisher/entertainment.xml' },
+    { name: 'Technology', url: 'https://moxie.foxnews.com/feed-publisher/tech.xml' }
+  ];
+
+  let allAutoNews = [];
+
+  for (const cat of categories) {
+    try {
+      const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(cat.url)}`);
+      const data = await response.json();
+      if (data.status === 'ok') {
+        const items = data.items.map((item, index) => ({
+          id: `auto-${cat.name.toLowerCase()}-${index}`,
+          title: item.title,
+          excerpt: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 160) + '...' : 'Latest updates from our sports and news desk.',
+          content: item.content || item.description,
+          image: item.thumbnail || item.enclosure?.link || getDefaultImage(cat.name),
+          category: cat.name,
+          date: item.pubDate,
+          timestamp: new Date(item.pubDate).getTime(),
+          readTime: `${Math.floor(Math.random() * 5) + 3} min read`,
+          author: `GoNow ${cat.name} Desk`,
+          isAuto: true,
+          source: item.link
+        }));
+        allAutoNews = [...allAutoNews, ...items];
       }
+    } catch (e) {
+      console.warn(`Failed to fetch ${cat.name} news`, e);
     }
-  } catch (error) {
-    console.warn('Silent failure on auto-news fetch:', error);
   }
+
+  // Sort by most recent first
+  allAutoNews.sort((a, b) => b.timestamp - a.timestamp);
+  
+  state.autoNews = allAutoNews;
+  localStorage.setItem('autoNewsCache', JSON.stringify(allAutoNews));
+  
+  if (pathRoutes.includes(state.currentRoute)) {
+    renderPage(state.currentRoute);
+  }
+}
+
+const pathRoutes = ['/home', '/politics', '/football', '/entertainment', '/technology'];
+
+function getDefaultImage(cat) {
+  const images = {
+    'Politics': 'https://images.unsplash.com/photo-1541872703-74c5e44383f5?q=80&w=2000&auto=format&fit=crop',
+    'Football': 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=2000&auto=format&fit=crop',
+    'Entertainment': 'https://images.unsplash.com/photo-1499364615650-ec38552f4f34?q=80&w=2000&auto=format&fit=crop',
+    'Technology': 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?q=80&w=2000&auto=format&fit=crop'
+  };
+  return images[cat] || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=2000&auto=format&fit=crop';
 }
 
 function init() {
@@ -182,9 +214,9 @@ function init() {
   });
 
   handleRoute();
-  fetchFootballNews();
-  // Refresh auto-news every hour
-  setInterval(fetchFootballNews, 3600000);
+  syncAllNews();
+  // Refresh all news every 30 minutes
+  setInterval(syncAllNews, 1800000);
 
   window.addEventListener('click', (e) => {
     if (e.target === modal) modal.classList.remove('active');
@@ -303,20 +335,20 @@ function renderPage(path) {
     renderHome(container);
   } else if (path === '/politics') {
     pageTitle = 'Politics News | GoNow';
-    renderCategory(container, 'Politics', state.news.filter(n => n.category === 'Politics'));
+    const combined = [...state.news.filter(n => n.category === 'Politics'), ...state.autoNews.filter(n => n.category === 'Politics')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    renderCategory(container, 'Politics', combined);
   } else if (path === '/football') {
     pageTitle = 'Football News & Updates | GoNow';
-    const combinedFootball = [
-      ...state.news.filter(n => n.category === 'Football'),
-      ...state.autoFootballNews
-    ];
-    renderCategory(container, 'Football', combinedFootball);
+    const combined = [...state.news.filter(n => n.category === 'Football'), ...state.autoNews.filter(n => n.category === 'Football')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    renderCategory(container, 'Football', combined);
   } else if (path === '/entertainment') {
     pageTitle = 'Entertainment & Trends | GoNow';
-    renderCategory(container, 'Entertainment', state.news.filter(n => n.category === 'Entertainment'));
+    const combined = [...state.news.filter(n => n.category === 'Entertainment'), ...state.autoNews.filter(n => n.category === 'Entertainment')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    renderCategory(container, 'Entertainment', combined);
   } else if (path === '/technology') {
     pageTitle = 'Tech News & Innovation | GoNow';
-    renderCategory(container, 'Technology', state.news.filter(n => n.category === 'Technology'));
+    const combined = [...state.news.filter(n => n.category === 'Technology'), ...state.autoNews.filter(n => n.category === 'Technology')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    renderCategory(container, 'Technology', combined);
   } else if (path === '/things-to-know') {
     pageTitle = 'Interesting Things To Know | GoNow';
     renderCategory(container, 'Things To Know', thingsToKnow, 'knowledge');
@@ -334,7 +366,7 @@ function renderPage(path) {
     renderAdmin(container);
   } else if (path.startsWith('/article/')) {
     const id = path.split('/')[2];
-    const article = [...state.news, ...state.autoFootballNews].find(n => n.id === id);
+    const article = [...state.news, ...state.autoNews].find(n => n.id === id);
     if (article) {
       pageTitle = `${article.title} | GoNow`;
       openDetail(id, 'news');
@@ -351,71 +383,77 @@ function renderPage(path) {
 
 // Page Renderers
 function renderHome(container) {
-  if (!state.newsLoaded) {
-    container.innerHTML = `
-      <div style="text-align: center; padding: 100px 20px;">
-        <div class="loader" style="margin: 0 auto 20px;"></div>
-        <h2 style="font-size: 1.5rem;">Connecting to GoNow...</h2>
-        <p style="color: var(--text-muted);">Fetching the latest world news</p>
-      </div>
-    `;
-    return;
-  }
-
-  if (state.news.length === 0) {
-    container.innerHTML = `
-      <div style="text-align: center; padding: 100px 20px;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); opacity: 0.5; margin-bottom: 20px;"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
-        <h1 style="font-size: 2rem; margin-bottom: 10px;">The news desk is currently quiet</h1>
-        <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto;">Our editors are working on new stories. Check back in a few moments for the latest updates.</p>
-        <a href="/admin" class="submit-btn" style="display: inline-block; margin-top: 30px; padding: 12px 30px;">Publish First Article</a>
-      </div>
-    `;
-    return;
-  }
-
-  const featured = state.news[0];
-  const latest = state.news;
-  const trending = state.news.slice(0, 5);
   const happeningsList = state.wikipediaEvents.length > 0 ? state.wikipediaEvents : dailyHappenings[0].events;
   const quote = dailyQuotes[0];
   const knowledge = thingsToKnow[0];
   const isList = state.viewMode === 'list';
 
+  // Combine and sort ALL news sources by timestamp
+  const allAvailableNews = [...state.news, ...state.autoNews].sort((a, b) => {
+    const timeA = a.timestamp || new Date(a.date).getTime() || 0;
+    const timeB = b.timestamp || new Date(b.date).getTime() || 0;
+    return timeB - timeA;
+  });
+
+  if (allAvailableNews.length === 0) {
+    if (!state.newsLoaded) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 100px 20px;">
+          <div class="loader" style="margin: 0 auto 20px;"></div>
+          <h2 style="font-size: 1.5rem;">Connecting to GoNow...</h2>
+          <p style="color: var(--text-muted);">Fetching the latest world news</p>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 100px 20px;">
+          <h1 style="font-size: 2rem;">The news desk is currently quiet</h1>
+          <a href="/admin" class="submit-btn" style="display: inline-block; margin-top: 30px;">Publish First Article</a>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  const featured = allAvailableNews[0];
+  const latest = allAvailableNews.slice(1);
+  const trending = allAvailableNews.slice(0, 5);
+
   container.innerHTML = `
-    <section class="hero">
-      <div class="hero-card" onclick="${featured.id ? `navigateTo('/article/${featured.id}')` : ''}" style="cursor: pointer;">
+    <section class="hero magazine-hero">
+      <div class="hero-card" onclick="navigateTo('/article/${featured.id}')" style="cursor: pointer;">
         <div class="hero-img-wrapper">
           <img src="${featured.image}" alt="${featured.title}" class="hero-img" loading="lazy">
         </div>
         <div class="hero-content">
-          <span class="badge">${featured.category}</span>
+          <div class="meta-label">TOP STORY • ${featured.category.toUpperCase()}</div>
           <h1 class="hero-title">${featured.title}</h1>
           <p class="hero-description">${featured.excerpt}</p>
+          <div class="hero-footer">
+            <span class="read-more">Read Full Story →</span>
+          </div>
         </div>
       </div>
     </section>
 
     <div class="main-grid">
       <section class="latest-news">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-          <h2 class="section-title" style="margin-bottom: 0;">Latest News</h2>
-          <div class="view-toggle">
-            <button class="toggle-btn ${!isList ? 'active' : ''}" onclick="toggleViewMode('grid')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-              Grid
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid var(--text-color); padding-bottom: 10px;">
+          <h2 class="section-title" style="margin-bottom: 0; text-transform: uppercase; letter-spacing: 2px; font-weight: 800;">Recently Published</h2>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="icon-btn" onclick="syncAllNews()" title="Refresh Feed" style="background: var(--card-bg);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
             </button>
-            <button class="toggle-btn ${isList ? 'active' : ''}" onclick="toggleViewMode('list')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
-              List
-            </button>
+            <div class="view-toggle">
+              <button class="toggle-btn ${!isList ? 'active' : ''}" onclick="toggleViewMode('grid')">Grid</button>
+              <button class="toggle-btn ${isList ? 'active' : ''}" onclick="toggleViewMode('list')">List</button>
+            </div>
           </div>
         </div>
         <div class="news-grid ${isList ? 'list-view' : ''}">
           ${latest.length > 0 ? latest.map((item, index) => {
             const card = createNewsCard(item);
-            // Insert ad after every 3 articles
-            if (index > 0 && index % 3 === 0) {
+            if (index > 0 && (index + 1) % 6 === 0) {
               return card + createAdUnit('9876543210');
             }
             return card;
@@ -424,43 +462,44 @@ function renderHome(container) {
       </section>
 
       <aside class="sidebar">
-        ${createAdUnit('1234567890', 'rectangle')}
-        
         <div class="sidebar-section">
-          <h2 class="section-title">Trending</h2>
+          <h2 class="section-title" style="border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Trending Now</h2>
           ${trending.map((item, i) => `
             <div class="trending-item" onclick="navigateTo('/article/${item.id}')">
               <span class="trending-num">0${i + 1}</span>
               <div class="trending-content">
-                <span class="badge" style="font-size: 0.6rem; padding: 2px 6px;">${item.category}</span>
-                <h4>${item.title}</h4>
+                <span class="meta-label" style="font-size: 0.6rem;">${item.category}</span>
+                <h4 style="margin-top: 4px; font-weight: 600; line-height: 1.3;">${item.title}</h4>
               </div>
             </div>
           `).join('')}
         </div>
 
         <div class="sidebar-section">
-          <div class="knowledge-box" style="background: var(--card-bg); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 25px;">
-             <span class="badge" style="background: #8b5cf6; margin-bottom: 10px;">Did You Know?</span>
-             <h4 style="margin-bottom: 10px; font-size: 1.1rem;">${knowledge.title}</h4>
-             <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">${knowledge.tip}</p>
-             <a href="/things-to-know" class="btn btn-outline" style="width: 100%; margin-top: 15px; text-align: center; display: block;">See More Knowledge</a>
+          <div class="knowledge-box" style="background: #1a1a1a; color: white; padding: 25px; border-radius: var(--radius); margin-bottom: 25px; border: 1px solid #333;">
+             <div class="meta-label" style="color: #8b5cf6; margin-bottom: 10px;">Daily Insight</div>
+             <h4 style="margin-bottom: 12px; font-size: 1.25rem; font-family: 'Inter', sans-serif; font-weight: 700;">${knowledge.title}</h4>
+             <p style="font-size: 0.95rem; opacity: 0.8; line-height: 1.6; margin-bottom: 20px;">${knowledge.tip}</p>
+             <a href="/things-to-know" class="btn" style="width: 100%; border: 1px solid #444; text-align: center; display: block; color: white;">Expand Knowledge</a>
           </div>
 
-          <div class="daily-box">
-            <h3>Daily Happenings (via Wikipedia)</h3>
+          <div class="daily-box" style="background: var(--card-bg); border: 1px solid var(--border-color);">
+            <h3 style="text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; margin-bottom: 15px;">Historical Context</h3>
             <ul class="daily-list">
-              ${happeningsList.map(e => `<li>${e}</li>`).join('')}
+              ${happeningsList.slice(0, 3).map(e => `<li style="font-size: 0.85rem; padding: 10px 0; border-bottom: 1px solid var(--border-color);">${e}</li>`).join('')}
             </ul>
-            <div class="quote-box">
-              <p class="quote-text">"${quote.quote}"</p>
-              <p class="quote-author">— ${quote.author}</p>
+            <div class="quote-box" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+              <p class="quote-text" style="font-style: italic; font-family: 'Inter', sans-serif;">"${quote.quote}"</p>
+              <p class="quote-author" style="margin-top: 10px;">— ${quote.author}</p>
             </div>
           </div>
         </div>
+
+        ${createAdUnit('1234567890', 'rectangle')}
       </aside>
     </div>
   `;
+  attachCardListeners();
 }
 
 function renderCategory(container, title, items, type = 'news') {
@@ -851,7 +890,7 @@ function createAdUnit(slot, format = 'auto') {
 
 function createNewsCard(item) {
   const isSaved = state.savedItems.some(s => s.id === item.id);
-  const displayAuthor = item.isAuto ? 'GoNow Sports News' : (item.author || 'GoNow Team');
+  const displayAuthor = item.author || (item.isAuto ? `GoNow ${item.category} Desk` : 'GoNow Team');
   return `
     <article class="card" data-id="${item.id}" data-type="news">
       <a href="/article/${item.id}" class="card-link-wrapper" style="text-decoration: none; color: inherit; display: block; height: 100%;">
@@ -860,16 +899,18 @@ function createNewsCard(item) {
         </div>
         <div class="card-content">
           <div class="card-meta">
-            <span class="badge">${item.category}</span>
-            <span>${item.readTime}</span>
-            ${item.isAuto ? '<span style="font-size: 0.7rem; color: var(--text-muted); padding-left: 5px;">• LIVE</span>' : ''}
+            <span class="meta-label" style="font-size: 0.65rem; margin-bottom: 5px;">${item.category.toUpperCase()}</span>
+            ${item.isAuto ? '<span style="font-size: 0.65rem; color: #ff3e3e; font-weight: 800; letter-spacing: 1px;">• LIVE</span>' : ''}
           </div>
           <h3 class="card-title">${item.title}</h3>
           <p class="card-excerpt">${item.excerpt}</p>
-          <div class="card-footer">
-            <span>By ${displayAuthor}</span>
+          <div class="card-footer" style="margin-top: auto; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color);">
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-weight: 700; font-size: 0.8rem;">By ${displayAuthor}</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">${item.readTime}</span>
+            </div>
             <button class="save-btn ${isSaved ? 'text-primary' : ''}" onclick="event.preventDefault(); event.stopPropagation(); toggleSave('${item.id}', 'news')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
             </button>
           </div>
         </div>
@@ -910,8 +951,8 @@ function attachCardListeners() {
   });
 }
 
-async function openDetail(id, type) {
-  const item = [...state.news, ...state.autoFootballNews, ...thingsToKnow].find(i => i.id === id);
+function openDetail(id, type) {
+  const item = [...state.news, ...state.autoNews, ...thingsToKnow].find(i => i.id === id);
   if (!item) return;
 
   const isSaved = state.savedItems.some(s => s.id === item.id);
