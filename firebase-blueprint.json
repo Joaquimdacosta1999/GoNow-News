@@ -34,13 +34,24 @@
     },
     "User": {
       "title": "User Profile",
-      "description": "User profile information and roles.",
+      "description": "User profile information, roles, and preferences.",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "role": { "type": "string", "enum": ["admin", "user"] },
-        "displayName": { "type": "string" }
+        "displayName": { "type": "string" },
+        "followedCategories": { 
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notificationPreferences": {
+          "type": "object",
+          "properties": {
+            "emailAlerts": { "type": "boolean" },
+            "browserNotifications": { "type": "boolean" }
+          }
+        }
       },
       "required": ["uid", "email", "role"]
     }

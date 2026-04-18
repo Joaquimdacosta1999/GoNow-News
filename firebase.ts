@@ -15,7 +15,8 @@ import {
   orderBy, 
   onSnapshot,
   serverTimestamp,
-  getDocFromServer
+  getDocFromServer,
+  limit
 } from 'firebase/firestore';
 
 // Import the Firebase configuration
@@ -107,5 +108,6 @@ export {
   where,
   orderBy,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  limit
 };

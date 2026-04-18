@@ -24,7 +24,8 @@ import {
   onSnapshot,
   serverTimestamp,
   handleFirestoreError,
-  OperationType
+  OperationType,
+  limit
 } from './firebase.ts';
 
 import { marked } from 'marked';
@@ -52,8 +53,12 @@ const state = {
   comments: {},
   currentRoute: window.location.pathname === '/' ? '/home' : window.location.pathname,
   viewMode: localStorage.getItem('viewMode') || 'grid',
-  autoNews: JSON.parse(localStorage.getItem('autoNewsCache')) || []
+  autoNews: JSON.parse(localStorage.getItem('autoNewsCache')) || [],
+  notifications: JSON.parse(localStorage.getItem('gonow_notifications')) || []
 };
+
+// Global variables
+let freshNotifs = 0;
 
 // Valid routes
 const pathRoutes = ['/home', '/politics', '/business', '/football', '/entertainment', '/technology', '/author'];
@@ -72,6 +77,11 @@ const closeModal = document.getElementById('close-modal');
 const modalBody = document.getElementById('modal-body');
 const authBtn = document.getElementById('auth-btn');
 const adminLink = document.getElementById('admin-link');
+const notifBtn = document.getElementById('notif-btn');
+const notifDropdown = document.getElementById('notif-dropdown');
+const notifBadge = document.getElementById('notif-badge');
+const notifList = document.getElementById('notif-list');
+const notifWrapper = document.getElementById('notif-wrapper');
 
 // Helper to extract image from RSS item
 function extractImage(item, category) {
@@ -251,6 +261,7 @@ function init() {
   authBtn.addEventListener('click', handleAuth);
 
   initNewsletter();
+  initNotifBell();
 
   // Auth State Listener
   onAuthStateChanged(auth, async (user) => {
@@ -264,6 +275,9 @@ function init() {
         authBtn.title = 'Logout';
         authBtn.innerHTML = `<img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + user.displayName}" alt="User" style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent-color);">`;
         
+        if (notifWrapper) notifWrapper.classList.remove('hidden');
+        renderNotifs();
+
         try {
           // Get or create user profile
           const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -275,11 +289,15 @@ function init() {
               email: user.email,
               role: 'user',
               displayName: user.displayName,
-              createdAt: serverTimestamp()
+              createdAt: serverTimestamp(),
+              followedCategories: []
             };
             await setDoc(doc(db, 'users', user.uid), newProfile);
             state.userProfile = newProfile;
           }
+          
+          setupRealtimeNotifs();
+
         } catch (error) {
           console.error('Profile fetch error:', error);
         }
@@ -294,6 +312,7 @@ function init() {
         authBtn.title = 'Login';
         authBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
         if (adminLink) adminLink.classList.add('hidden');
+        if (notifWrapper) notifWrapper.classList.add('hidden');
       }
       handleRoute();
     } catch (err) {
@@ -398,6 +417,148 @@ function initNewsletter() {
           btn.innerText = 'ERROR';
         }
         btn.disabled = false;
+      }
+    });
+  });
+}
+
+// Notification Center Logic
+function initNotifBell() {
+  if (!notifBtn) return;
+  
+  notifBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    notifDropdown.classList.toggle('active');
+    if (notifDropdown.classList.contains('active')) {
+      clearBadge();
+    }
+  });
+
+  document.addEventListener('click', () => {
+    if (notifDropdown) notifDropdown.classList.remove('active');
+  });
+
+  notifDropdown.addEventListener('click', (e) => e.stopPropagation());
+}
+
+window.clearNotifications = () => {
+  state.notifications = [];
+  localStorage.setItem('gonow_notifications', JSON.stringify([]));
+  renderNotifs();
+};
+
+function clearBadge() {
+  freshNotifs = 0;
+  if (notifBadge) {
+    notifBadge.classList.add('hidden');
+    notifBadge.innerText = '';
+  }
+}
+
+function renderNotifs() {
+  if (!notifList) return;
+  
+  if (state.notifications.length === 0) {
+    notifList.innerHTML = '<p class="notif-empty">No new alerts.</p>';
+    return;
+  }
+
+  notifList.innerHTML = state.notifications.map(notif => `
+    <div class="notif-item ${notif.read ? '' : 'unread'}" onclick="handleNotifClick('${notif.articleId}', '${notif.id}')">
+      <div class="notif-title">${notif.title}</div>
+      <div class="notif-time">${formatDate(notif.timestamp)}</div>
+    </div>
+  `).join('');
+}
+
+window.handleNotifClick = (articleId, notifId) => {
+  const notif = state.notifications.find(n => n.id === notifId);
+  if (notif) notif.read = true;
+  localStorage.setItem('gonow_notifications', JSON.stringify(state.notifications));
+  renderNotifs();
+  navigateTo(`/article/${articleId}`);
+  if (notifDropdown) notifDropdown.classList.remove('active');
+};
+
+function addNotification(notif) {
+  // Check if notification already exists
+  if (state.notifications.find(n => n.articleId === notif.articleId)) return;
+  
+  state.notifications.unshift({
+    id: Date.now().toString(),
+    ...notif,
+    read: false,
+    timestamp: Date.now()
+  });
+  
+  // Limit to 20
+  if (state.notifications.length > 20) state.notifications.pop();
+  
+  localStorage.setItem('gonow_notifications', JSON.stringify(state.notifications));
+  
+  freshNotifs++;
+  updateBadge();
+  renderNotifs();
+}
+
+function updateBadge() {
+  if (!notifBadge) return;
+  if (freshNotifs > 0) {
+    notifBadge.classList.remove('hidden');
+    notifBadge.innerText = freshNotifs > 9 ? '9+' : freshNotifs;
+  } else {
+    notifBadge.classList.add('hidden');
+  }
+}
+
+async function toggleFollow(category) {
+  if (!state.user) {
+    handleAuth();
+    return;
+  }
+
+  const followed = state.userProfile.followedCategories || [];
+  const index = followed.indexOf(category);
+  
+  if (index > -1) {
+    followed.splice(index, 1);
+  } else {
+    followed.push(category);
+  }
+
+  try {
+    await updateDoc(doc(db, 'users', state.user.uid), {
+      followedCategories: followed
+    });
+    state.userProfile.followedCategories = followed;
+    handleRoute(); // Re-render to update follow buttons
+  } catch (error) {
+    console.error('Error updating follows:', error);
+  }
+}
+
+window.toggleFollow = toggleFollow;
+
+function setupRealtimeNotifs() {
+  if (!state.user) return;
+  
+  // Listen for new articles in Firestore
+  const q = query(collection(db, 'news'), orderBy('createdAt', 'desc'), limit(5));
+  onSnapshot(q, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === "added") {
+        const article = change.doc.data();
+        const articleId = change.doc.id;
+        
+        // Only notify if it's new (created after user logged in or within last hour)
+        const isRecent = (Date.now() - (article.createdAt?.toMillis() || 0)) < 3600000;
+        
+        if (isRecent && state.userProfile?.followedCategories?.includes(article.category)) {
+          addNotification({
+            title: `New in ${article.category}: ${article.title}`,
+            articleId: articleId
+          });
+        }
       }
     });
   });
@@ -968,12 +1129,22 @@ function renderCategory(container, title, items, type = 'news') {
   const urlParams = new URLSearchParams(window.location.search);
   const page = parseInt(urlParams.get('page')) || 1;
   const pageSize = 12;
-  const totalPages = Math.ceil(items.length / pageSize);
+  
+  const isFollowed = state.userProfile?.followedCategories?.includes(title);
+  const followBtn = state.user ? `
+    <button onclick="toggleFollow('${title}')" class="submit-btn" style="padding: 6px 16px; font-size: 0.8rem; background: ${isFollowed ? 'var(--accent-color)' : 'var(--primary-color)'}; color: ${isFollowed ? 'var(--text-color)' : 'white'}; border: 1px solid var(--border-color);">
+      ${isFollowed ? 'Following' : 'Follow Topic'}
+    </button>
+  ` : '';
+
   const pagedItems = items.slice((page - 1) * pageSize, page * pageSize);
   
   container.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-      <h1 class="section-title" style="margin-bottom: 0;">${title}</h1>
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <h1 class="section-title" style="margin-bottom: 0;">${title}</h1>
+        ${followBtn}
+      </div>
       <div class="view-toggle">
         <button class="toggle-btn ${!isList ? 'active' : ''}" onclick="toggleViewMode('grid')">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
@@ -1772,6 +1943,12 @@ function handleSearch(e) {
 
 function escapeHtml(unsafe) {
   return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function formatDate(timestamp) {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 
