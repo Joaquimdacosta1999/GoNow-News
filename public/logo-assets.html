@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoNow Logo Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f5;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 800px;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        h1 { margin-bottom: 24px; color: #1a1a1a; }
+        .logo-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .preview {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+            border: 1px dashed #ccc;
+        }
+        .btn {
+            background-color: #0066ff;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn:hover { background-color: #0052cc; }
+        canvas { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GoNow Publisher Assets</h1>
+        <p>Use this page to generate the PNG logos required for Google Publisher Center.</p>
+
+        <div class="logo-section">
+            <h2>Square Logo (1000x1000)</h2>
+            <img src="/logo-square.svg" class="preview" id="square-preview" width="200" height="200">
+            <button class="btn" onclick="downloadPng('square-preview', 1000, 1000, 'logo-square.png')">Download Square PNG</button>
+        </div>
+
+        <div class="logo-section">
+            <h2>Rectangular Logo (400x100)</h2>
+            <img src="/logo-wide.svg" class="preview" id="wide-preview" width="400" height="100">
+            <button class="btn" onclick="downloadPng('wide-preview', 400, 100, 'logo-wide.png')">Download Rectangular PNG</button>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        async function downloadPng(imgId, width, height, filename) {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = document.getElementById(imgId);
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Draw white background if Square (optional, but good practice)
+            if (imgId === 'square-preview') {
+                ctx.fillStyle = '#0066ff';
+                ctx.fillRect(0, 0, width, height);
+            }
+
+            // Create a temporary image to draw SVG to canvas
+            const blob = await fetch(img.src).then(r => r.blob());
+            const url = URL.createObjectURL(blob);
+            const tempImg = new Image();
+            
+            tempImg.onload = () => {
+                ctx.drawImage(tempImg, 0, 0, width, height);
+                
+                const dataUrl = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = dataUrl;
+                link.click();
+                
+                URL.revokeObjectURL(url);
+            };
+            tempImg.src = url;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100" viewBox="0 0 400 100">
+  <g transform="translate(20, 20) scale(2.5)">
+    <circle cx="12" cy="12" r="10" stroke="#0066ff" stroke-width="2" fill="none"/>
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" stroke="#0066ff" stroke-width="2" fill="none"/>
+    <path d="M2 12h20" stroke="#0066ff" stroke-width="2" fill="none"/>
+    <path d="m13 10-2 4h4l-2 4" stroke="#0066ff" stroke-width="2" fill="#0066ff"/>
+  </g>
+  <text x="100" y="65" font-family="Inter, sans-serif" font-size="48" font-weight="800" fill="#0066ff">GoNow</text>
+</svg>
