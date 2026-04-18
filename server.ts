@@ -15,6 +15,14 @@ async function startServer() {
     res.json({ status: 'ok', timestamp: new Date() });
   });
 
+  // Explicitly serve SEO files from public directory
+  const publicPath = path.join(process.cwd(), 'public');
+  ['sitemap.xml', 'robots.txt', 'ads.txt'].forEach(file => {
+    app.get(`/${file}`, (req, res) => {
+      res.sendFile(path.join(publicPath, file));
+    });
+  });
+
   // Mocked RSS feed for aggregators (would ideally pull from Firestore)
   app.get('/rss', (req, res) => {
     res.set('Content-Type', 'text/xml');
@@ -52,10 +60,10 @@ async function startServer() {
     });
   }
 
-  // Handle SPA fallback for dev as well (handled by Vite's middlewareMode: 'spa' usually, 
-  // but we enforce it if needed)
+  // Handle SPA fallback for dev as well
   app.get('*', async (req, res, next) => {
-    if (req.url.startsWith('/api') || req.url === '/rss') return next();
+    // Skip API, RSS, and assets with extensions
+    if (req.url.startsWith('/api') || req.url === '/rss' || req.url.includes('.')) return next();
     
     // For local dev, serve index.html
     try {
