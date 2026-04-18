@@ -48,7 +48,8 @@ const state = {
   wikipediaEvents: [],
   comments: {},
   currentRoute: window.location.pathname === '/' ? '/home' : window.location.pathname,
-  viewMode: localStorage.getItem('viewMode') || 'grid'
+  viewMode: localStorage.getItem('viewMode') || 'grid',
+  autoFootballNews: []
 };
 
 // DOM Elements
@@ -67,6 +68,33 @@ const authBtn = document.getElementById('auth-btn');
 const adminLink = document.getElementById('admin-link');
 
 // Initialize
+async function fetchFootballNews() {
+  try {
+    const response = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.skysports.com/rss/12040');
+    const data = await response.json();
+    if (data.status === 'ok') {
+      state.autoFootballNews = data.items.map((item, index) => ({
+        id: 'auto-' + index,
+        title: item.title,
+        excerpt: item.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...',
+        content: item.content || item.description,
+        image: item.thumbnail || item.enclosure?.link || 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2070&auto=format&fit=crop',
+        category: 'Football',
+        date: new Date(item.pubDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        readTime: '3 min read',
+        author: 'GoNow Sports News',
+        isAuto: true,
+        source: item.link
+      }));
+      if (state.currentRoute === '/football' || state.currentRoute === '/home') {
+        renderPage(state.currentRoute);
+      }
+    }
+  } catch (error) {
+    console.warn('Silent failure on auto-news fetch:', error);
+  }
+}
+
 function init() {
   body.setAttribute('data-theme', state.currentTheme);
   updateThemeIcon();
@@ -154,6 +182,9 @@ function init() {
   });
 
   handleRoute();
+  fetchFootballNews();
+  // Refresh auto-news every hour
+  setInterval(fetchFootballNews, 3600000);
 
   window.addEventListener('click', (e) => {
     if (e.target === modal) modal.classList.remove('active');
@@ -275,7 +306,11 @@ function renderPage(path) {
     renderCategory(container, 'Politics', state.news.filter(n => n.category === 'Politics'));
   } else if (path === '/football') {
     pageTitle = 'Football News & Updates | GoNow';
-    renderCategory(container, 'Football', state.news.filter(n => n.category === 'Football'));
+    const combinedFootball = [
+      ...state.news.filter(n => n.category === 'Football'),
+      ...state.autoFootballNews
+    ];
+    renderCategory(container, 'Football', combinedFootball);
   } else if (path === '/entertainment') {
     pageTitle = 'Entertainment & Trends | GoNow';
     renderCategory(container, 'Entertainment', state.news.filter(n => n.category === 'Entertainment'));
@@ -299,7 +334,7 @@ function renderPage(path) {
     renderAdmin(container);
   } else if (path.startsWith('/article/')) {
     const id = path.split('/')[2];
-    const article = state.news.find(n => n.id === id);
+    const article = [...state.news, ...state.autoFootballNews].find(n => n.id === id);
     if (article) {
       pageTitle = `${article.title} | GoNow`;
       openDetail(id, 'news');
@@ -816,6 +851,7 @@ function createAdUnit(slot, format = 'auto') {
 
 function createNewsCard(item) {
   const isSaved = state.savedItems.some(s => s.id === item.id);
+  const displayAuthor = item.isAuto ? 'GoNow Sports News' : (item.author || 'GoNow Team');
   return `
     <article class="card" data-id="${item.id}" data-type="news">
       <a href="/article/${item.id}" class="card-link-wrapper" style="text-decoration: none; color: inherit; display: block; height: 100%;">
@@ -826,11 +862,12 @@ function createNewsCard(item) {
           <div class="card-meta">
             <span class="badge">${item.category}</span>
             <span>${item.readTime}</span>
+            ${item.isAuto ? '<span style="font-size: 0.7rem; color: var(--text-muted); padding-left: 5px;">• LIVE</span>' : ''}
           </div>
           <h3 class="card-title">${item.title}</h3>
           <p class="card-excerpt">${item.excerpt}</p>
           <div class="card-footer">
-            <span>${item.date}</span>
+            <span>By ${displayAuthor}</span>
             <button class="save-btn ${isSaved ? 'text-primary' : ''}" onclick="event.preventDefault(); event.stopPropagation(); toggleSave('${item.id}', 'news')">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
             </button>
@@ -874,10 +911,7 @@ function attachCardListeners() {
 }
 
 async function openDetail(id, type) {
-  let item;
-  if (type === 'news') item = state.news.find(n => n.id === id);
-  else if (type === 'html') item = htmlLessons.find(h => h.id === id);
-
+  const item = [...state.news, ...state.autoFootballNews, ...thingsToKnow].find(i => i.id === id);
   if (!item) return;
 
   const isSaved = state.savedItems.some(s => s.id === item.id);
