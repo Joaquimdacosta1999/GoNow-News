@@ -1,0 +1,21 @@
+{
+  "name": "GoNow",
+  "short_name": "GoNow",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0066ff",
+  "description": "GoNow — your daily dose of news, football scores, tech, and entertainment.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

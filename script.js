@@ -204,6 +204,10 @@ function init() {
   body.setAttribute('data-theme', state.currentTheme);
   updateThemeIcon();
 
+  // Dynamic copyright year
+  const yearEl = document.getElementById('copyright-year');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
   // Event Listeners
   themeToggle.addEventListener('click', toggleTheme);
   searchToggle.addEventListener('click', () => searchOverlay.classList.add('active'));
@@ -448,6 +452,12 @@ function renderPage(path) {
   } else if (path === '/admin') {
     pageTitle = 'Admin Board | GoNow';
     renderAdmin(container);
+  } else if (path === '/privacy') {
+    pageTitle = 'Privacy Policy | GoNow';
+    renderPrivacy(container);
+  } else if (path === '/terms') {
+    pageTitle = 'Terms of Service | GoNow';
+    renderTerms(container);
   } else if (path.startsWith('/article/')) {
     const id = path.split('/')[2];
     const article = [...state.news, ...state.autoNews].find(n => n.id === id);
@@ -457,6 +467,7 @@ function renderPage(path) {
       pageImage = article.image || pageImage;
       pageType = 'article';
       openDetail(id, 'news');
+      injectArticleSchema(article);
     } else {
       navigateTo('/home');
     }
@@ -486,14 +497,86 @@ function renderPage(path) {
   setMeta('meta[name="twitter:title"]', 'content', pageTitle);
   setMeta('meta[name="twitter:description"]', 'content', pageDescription);
   setMeta('meta[name="twitter:image"]', 'content', pageImage);
-  setMeta('meta[name="twitter:url"]', 'content', currentUrl);
+  setMeta('meta[property="twitter:url"]', 'content', currentUrl);
 
   mainContent.appendChild(container);
   // Re-attach listeners now that the content is in the DOM
   attachCardListeners();
 }
 
+/**
+ * Injects NewsArticle JSON-LD for better SEO on individual article pages
+ */
+function injectArticleSchema(article) {
+  // Remove existing Article schema if any
+  const existing = document.getElementById('article-schema');
+  if (existing) existing.remove();
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    "headline": article.title,
+    "image": [article.image],
+    "datePublished": new Date(article.timestamp || Date.now()).toISOString(),
+    "dateModified": new Date(article.timestamp || Date.now()).toISOString(),
+    "author": [{
+      "@type": "Person",
+      "name": article.author || "GoNow Team",
+      "url": "https://gonow247.com/about"
+    }]
+  };
+
+  const script = document.createElement('script');
+  script.id = 'article-schema';
+  script.type = 'application/ld+json';
+  script.text = JSON.stringify(schema);
+  document.head.appendChild(script);
+}
+
 // Page Renderers
+function renderPrivacy(container) {
+  container.innerHTML = `
+    <div style="max-width: 800px; margin: 0 auto; padding: 40px 0;">
+      <h1 style="margin-bottom: 30px;">Privacy Policy</h1>
+      <p>Last updated: ${new Date().toLocaleDateString()}</p>
+      <p style="margin-top: 20px;">At GoNow, we take your privacy seriously. This policy explains how we collect and use your information.</p>
+      
+      <h3 style="margin-top: 30px;">1. Information We Collect</h3>
+      <p>We collect information you provide directly to us, such as when you create an account or leave a comment. This includes your name and email address.</p>
+      
+      <h3 style="margin-top: 30px;">2. Use of Information</h3>
+      <p>We use your information to provide and improve our services, communicate with you, and personalize your experience.</p>
+      
+      <h3 style="margin-top: 30px;">3. Data Security</h3>
+      <p>We use Firebase, a platform by Google, to store your data securely. We do not sell your personal information to third parties.</p>
+      
+      <h3 style="margin-top: 30px;">4. Contact Us</h3>
+      <p>If you have questions about this policy, please contact us at support@gonow247.com</p>
+    </div>
+  `;
+}
+
+function renderTerms(container) {
+  container.innerHTML = `
+    <div style="max-width: 800px; margin: 0 auto; padding: 40px 0;">
+      <h1 style="margin-bottom: 30px;">Terms of Service</h1>
+      <p>Last updated: ${new Date().toLocaleDateString()}</p>
+      
+      <h3 style="margin-top: 30px;">1. Acceptance of Terms</h3>
+      <p>By using GoNow, you agree to these terms. If you don't agree, please do not use our service.</p>
+      
+      <h3 style="margin-top: 30px;">2. User Content</h3>
+      <p>Users are responsible for the comments and content they post. We reserve the right to remove any content that violates our community guidelines.</p>
+      
+      <h3 style="margin-top: 30px;">3. Limitations of Liability</h3>
+      <p>GoNow provides information "as is" and is not responsible for any inaccuracies in the news content aggregated from third-party sources.</p>
+      
+      <h3 style="margin-top: 30px;">4. Modifications</h3>
+      <p>We may update these terms from time to time. Your continued use of the service constitutes acceptance of the new terms.</p>
+    </div>
+  `;
+}
+
 function renderHome(container) {
   const happeningsList = state.wikipediaEvents.length > 0 ? state.wikipediaEvents : dailyHappenings[0].events;
   const quote = dailyQuotes[0];
