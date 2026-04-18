@@ -138,15 +138,16 @@ async function syncAllNews() {
   for (const [name, urls] of Object.entries(categoryConfigs)) {
     let categoryNews = [];
     for (const url of urls) {
-      if (categoryNews.length >= 20) break; 
+      if (categoryNews.length >= 100) break; // Increase pool size for pagination
       try {
-        const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`);
+        const cacheBuster = Date.now();
+        const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&t=${cacheBuster}`);
         const data = await response.json();
         if (data.status === 'ok' && data.items && data.items.length > 0) {
           const items = data.items.map((item) => ({
             id: `auto-${name.toLowerCase()}-${Math.random().toString(36).substr(2, 9)}`,
             title: item.title,
-            excerpt: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 155) + '...' : 'Latest world news and expert analysis.',
+            excerpt: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 2000) + '...' : 'Latest world news and expert analysis.',
             content: item.content || item.description,
             image: extractImage(item, name),
             category: name,
@@ -212,7 +213,13 @@ function init() {
   themeToggle.addEventListener('click', toggleTheme);
   searchToggle.addEventListener('click', () => searchOverlay.classList.add('active'));
   closeSearch.addEventListener('click', () => searchOverlay.classList.remove('active'));
-  closeModal.addEventListener('click', () => modal.classList.remove('active'));
+  closeModal.addEventListener('click', () => {
+    modal.classList.remove('active');
+    if (state.currentRoute.startsWith('/article/')) {
+      const lastRoute = localStorage.getItem('lastPath') || '/home';
+      navigateTo(lastRoute);
+    }
+  });
   searchInput.addEventListener('input', handleSearch);
   authBtn.addEventListener('click', handleAuth);
 
@@ -292,16 +299,25 @@ function init() {
 
   handleRoute();
   syncAllNews();
-  // Refresh all news every 30 minutes
-  setInterval(syncAllNews, 1800000);
+  // Refresh all news every 5 minutes for instant updates
+  setInterval(syncAllNews, 300000);
 
   window.addEventListener('click', (e) => {
-    if (e.target === modal) modal.classList.remove('active');
+    if (e.target === modal) {
+      modal.classList.remove('active');
+      if (state.currentRoute.startsWith('/article/')) {
+        const lastRoute = localStorage.getItem('lastPath') || '/home';
+        navigateTo(lastRoute);
+      }
+    }
     if (e.target === searchOverlay) searchOverlay.classList.remove('active');
   });
 }
 
 function navigateTo(path) {
+  if (!path.startsWith('/article/')) {
+    localStorage.setItem('lastPath', path);
+  }
   window.history.pushState({}, '', path);
   handleRoute();
 }
@@ -738,6 +754,11 @@ function renderHome(container) {
 
 function renderCategory(container, title, items, type = 'news') {
   const isList = state.viewMode === 'list';
+  const urlParams = new URLSearchParams(window.location.search);
+  const page = parseInt(urlParams.get('page')) || 1;
+  const pageSize = 12;
+  const totalPages = Math.ceil(items.length / pageSize);
+  const pagedItems = items.slice((page - 1) * pageSize, page * pageSize);
   
   container.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
@@ -754,7 +775,7 @@ function renderCategory(container, title, items, type = 'news') {
       </div>
     </div>
     <div class="news-grid ${isList ? 'list-view' : ''}">
-      ${items.length > 0 ? items.map((item, index) => {
+      ${pagedItems.length > 0 ? pagedItems.map((item, index) => {
         let html = '';
         if (type === 'news') html = createNewsCard(item);
         if (type === 'knowledge') html = createKnowledgeCard(item);
@@ -766,6 +787,18 @@ function renderCategory(container, title, items, type = 'news') {
         return html;
       }).join('') : '<p style="color: var(--text-muted); padding: 50px 0; text-align: center;">No articles found in this category yet.</p>'}
     </div>
+    
+    ${totalPages > 1 ? `
+      <div class="pagination" style="display: flex; justify-content: center; align-items: center; gap: 20px; margin: 40px 0;">
+        <button class="btn" ${page === 1 ? 'disabled style="opacity: 0.5; pointer-events: none;"' : ''} onclick="event.preventDefault(); navigateTo('${window.location.pathname}?page=${page - 1}')">
+          ← Previous
+        </button>
+        <span style="font-weight: 700;">Page ${page} of ${totalPages}</span>
+        <button class="btn" ${page === totalPages ? 'disabled style="opacity: 0.5; pointer-events: none;"' : ''} onclick="event.preventDefault(); navigateTo('${window.location.pathname}?page=${page + 1}')">
+          Next →
+        </button>
+      </div>
+    ` : ''}
   `;
 }
 
