@@ -55,6 +55,9 @@ const state = {
   autoNews: JSON.parse(localStorage.getItem('autoNewsCache')) || []
 };
 
+// Valid routes
+const pathRoutes = ['/home', '/politics', '/business', '/football', '/entertainment', '/technology', '/author'];
+
 // DOM Elements
 const body = document.body;
 const themeToggle = document.getElementById('theme-toggle');
@@ -213,8 +216,6 @@ async function syncAllNews() {
     renderPage(state.currentRoute);
   }
 }
-
-const pathRoutes = ['/home', '/politics', '/business', '/football', '/entertainment', '/technology'];
 
 function getDefaultImage(cat) {
   const images = {
@@ -592,6 +593,11 @@ function renderPage(path) {
     pageTitle = 'About GoNow: Our News Mission & Vision | GoNow';
     pageDescription = 'Discover how GoNow is redefining news consumption with a fast, clean, and ad-light interface dedicated to the truth.';
     renderAbout(container);
+  } else if (path.startsWith('/author/')) {
+    const authorName = decodeURIComponent(path.split('/')[2]);
+    pageTitle = `${authorName} | GoNow News Author`;
+    pageDescription = `Read all articles and reports by ${authorName} on GoNow. High-quality journalism and expert analysis.`;
+    renderAuthor(container, authorName);
   } else if (path === '/admin') {
     pageTitle = 'Admin Board | GoNow';
     renderAdmin(container);
@@ -665,18 +671,35 @@ function injectArticleSchema(article) {
   const existing = document.getElementById('article-schema');
   if (existing) existing.remove();
 
+  const publishDate = new Date(article.timestamp || Date.now()).toISOString();
+  const modifiedDate = article.updatedAt ? new Date(article.updatedAt).toISOString() : publishDate;
+  const authorName = article.author || (article.isAuto ? `GoNow ${article.category} Desk` : 'GoNow Team');
+
   const schema = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `https://gonow247.com/article/${article.id}`
+    },
     "headline": article.title,
     "image": [article.image],
-    "datePublished": new Date(article.timestamp || Date.now()).toISOString(),
-    "dateModified": new Date(article.timestamp || Date.now()).toISOString(),
-    "author": [{
+    "datePublished": publishDate,
+    "dateModified": modifiedDate,
+    "author": {
       "@type": "Person",
-      "name": article.author || "GoNow Team",
-      "url": "https://gonow247.com/about"
-    }]
+      "name": authorName,
+      "url": `https://gonow247.com/author/${encodeURIComponent(authorName)}`
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "GoNow",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://gonow247.com/logo-square.svg"
+      }
+    },
+    "description": article.excerpt
   };
 
   const script = document.createElement('script');
@@ -1324,20 +1347,67 @@ window.deleteArticle = async (id) => {
 
 function renderAbout(container) {
   container.innerHTML = `
-    <div style="max-width: 800px; margin: 60px auto;">
-      <h1 style="font-size: 3rem; margin-bottom: 20px;">About GoNow</h1>
-      <p style="font-size: 1.2rem; margin-bottom: 40px; color: var(--text-muted);">
-        GoNow is a modern, fast, and simple news portal powered by Firebase. 
+    <div style="max-width: 800px; margin: 60px auto; line-height: 1.8;">
+      <h1 style="font-size: 3.5rem; font-weight: 800; margin-bottom: 24px; letter-spacing: -2px;">Ethics & Expertise</h1>
+      <p style="font-size: 1.4rem; margin-bottom: 40px; color: var(--text-muted); font-weight: 400;">
+        GoNow is committed to delivering <strong style="color: var(--text-color);">verified journalism</strong>, reliable data, and expert analysis in a fast, ad-light environment.
       </p>
-      <h2 class="section-title">Technologies Used</h2>
-      <ul style="margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <li>✓ Vanilla HTML5/CSS3/JS</li>
-        <li>✓ Firebase Authentication</li>
-        <li>✓ Firestore Real-time Database</li>
-        <li>✓ Google AdSense Monetization</li>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 60px;">
+        <div>
+          <h3 style="font-size: 1.2rem; margin-bottom: 15px; color: var(--primary-color);">Our Mission</h3>
+          <p>To provide a transparent news portal where information is prioritized over algorithms. We focus on E-E-A-T (Experience, Expertise, Authoritativeness, and Trustworthiness) to ensure our readers get the truth.</p>
+        </div>
+        <div>
+          <h3 style="font-size: 1.2rem; margin-bottom: 15px; color: var(--primary-color);">Transparency</h3>
+          <p>Every article on GoNow includes clear sourcing, author attribution, and timestamps. We clearly label AI-assisted summaries and manual reports to maintain the highest standards of integrity.</p>
+        </div>
+      </div>
+
+      <h2 class="section-title">Editorial Standards</h2>
+      <ul style="margin-bottom: 40px; list-style: none; padding: 0;">
+        <li style="padding: 15px 0; border-bottom: 1px solid var(--border-color);">✓ <strong>Fact-Checking:</strong> All automated feeds are sourced from high-authority global news agencies.</li>
+        <li style="padding: 15px 0; border-bottom: 1px solid var(--border-color);">✓ <strong>Primary Sourcing:</strong> We link directly to original reports for full transparency.</li>
+        <li style="padding: 15px 0; border-bottom: 1px solid var(--border-color);">✓ <strong>Correction Policy:</strong> Significant updates are clearly timestamped and explained.</li>
       </ul>
+
+      <div style="background: var(--accent-color); padding: 40px; border-radius: 20px; border: 1px solid var(--border-color);">
+        <h3 style="margin-bottom: 10px;">Contact Our News Desk</h3>
+        <p style="margin-bottom: 20px;">Have a tip or a correction? We value reader feedback in our pursuit of accuracy.</p>
+        <a href="mailto:desk@gonow247.com" class="btn" style="background: var(--primary-color); color: white; display: inline-block; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700;">Email the Editors</a>
+      </div>
     </div>
   `;
+}
+
+function renderAuthor(container, authorName) {
+  const articles = [...state.news, ...state.autoNews].filter(n => 
+    (n.author === authorName) || 
+    (authorName.includes(n.category) && n.isAuto)
+  ).sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+  container.innerHTML = `
+    <div style="padding-top: 40px;">
+      <div style="background: var(--card-bg); padding: 40px; border-radius: 24px; border: 1px solid var(--border-color); margin-bottom: 40px; display: flex; align-items: center; gap: 30px;">
+        <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 800; color: var(--primary-color);">
+          ${authorName.charAt(0)}
+        </div>
+        <div>
+          <h1 style="font-size: 2.5rem; margin-bottom: 5px;">${authorName}</h1>
+          <p style="color: var(--text-muted); font-size: 1.1rem;">Journalist & News Desk Editor at GoNow</p>
+          <div style="margin-top: 15px; display: flex; gap: 15px;">
+            <span class="badge" style="background: var(--primary-color);">${articles.length} Articles Published</span>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">Latest Reports by ${authorName}</h2>
+      <div class="news-grid">
+        ${articles.length > 0 ? articles.map(createNewsCard).join('') : '<p>This author is preparing their latest reports.</p>'}
+      </div>
+    </div>
+  `;
+  attachCardListeners();
 }
 
 // Component Creators
@@ -1360,7 +1430,7 @@ function createAdUnit(slot, format = 'auto') {
 
 function createNewsCard(item) {
   const isSaved = state.savedItems.some(s => s.id === item.id);
-  const displayAuthor = item.author || (item.isAuto ? `GoNow ${item.category} Desk` : 'GoNow Team');
+  const authorName = item.author || (item.isAuto ? `GoNow ${item.category} Desk` : 'GoNow Team');
   return `
     <article class="card" data-id="${item.id}" data-type="news">
       <a href="/article/${item.id}" class="card-link-wrapper" style="text-decoration: none; color: inherit; display: block; height: 100%;">
@@ -1376,7 +1446,7 @@ function createNewsCard(item) {
           <p class="card-excerpt">${item.excerpt}</p>
           <div class="card-footer" style="margin-top: auto; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color);">
             <div style="display: flex; flex-direction: column;">
-              <span style="font-weight: 700; font-size: 0.8rem;">By ${displayAuthor}</span>
+              <span style="font-weight: 700; font-size: 0.8rem;">By ${authorName}</span>
               <span style="font-size: 0.7rem; color: var(--text-muted);">${item.readTime}</span>
             </div>
             <button class="save-btn ${isSaved ? 'text-primary' : ''}" onclick="event.preventDefault(); event.stopPropagation(); toggleSave('${item.id}', 'news')">
@@ -1480,18 +1550,34 @@ function renderModalContent(item, type, isSaved, initialComments) {
   const rawContent = item.content || item.excerpt || 'No content available.';
   const sanitizedHtml = DOMPurify.sanitize(marked.parse(rawContent));
 
+  const authorName = item.author || (item.isAuto ? `GoNow ${item.category} Desk` : 'GoNow Team');
+  const pubDate = new Date(item.timestamp || Date.now());
+  const formattedTime = pubDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
+  const formattedDate = item.date || pubDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
   modalBody.innerHTML = `
     <img src="${item.image}" alt="${item.title}" class="detail-img" loading="lazy" decoding="async">
     <div class="detail-meta">
       <span class="badge">${item.category}</span>
-      ${item.date ? `<span>${item.date}</span>` : ''}
-      ${item.readTime ? `<span>${item.readTime} read</span>` : ''}
+      <span style="font-weight: 600;">Published on ${formattedDate} at ${formattedTime}</span>
+      ${item.readTime ? `<span>• ${item.readTime} read</span>` : ''}
+    </div>
+    <div style="margin: 20px 0; display: flex; align-items: center; gap: 10px;">
+      <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--accent-color); display: flex; align-items: center; justify-content: center; font-weight: 800; color: var(--primary-color);">
+        ${authorName.charAt(0)}
+      </div>
+      <div>
+        <p style="margin: 0; font-size: 0.9rem; font-weight: 700;">By <a href="/author/${encodeURIComponent(authorName)}" style="color: var(--primary-color); text-decoration: none;">${authorName}</a></p>
+        <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">GoNow News Correspondent</p>
+      </div>
     </div>
     <h1 class="detail-title">${item.title}</h1>
+    ${item.updatedAt ? `<div style="font-size: 0.8rem; background: var(--accent-color); padding: 8px 12px; border-radius: 6px; margin-bottom: 20px; display: inline-block; border: 1px solid var(--border-color);"><strong>Last updated:</strong> ${new Date(item.updatedAt).toLocaleString()}</div>` : ''}
     ${createAdUnit('1111111111', 'horizontal')}
     <div class="detail-body markdown-content">
       ${sanitizedHtml}
     </div>
+    ${item.source ? `<p style="margin-top: 30px; font-size: 0.9rem; color: var(--text-muted);">Source: <a href="${item.source}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); word-break: break-all;">${item.source}</a></p>` : ''}
     <div class="card-footer mt-4" style="border: none; padding-top: 0;">
       <div style="display: flex; gap: 15px;">
         <button class="submit-btn" onclick="toggleSave('${item.id}', '${type}')">
