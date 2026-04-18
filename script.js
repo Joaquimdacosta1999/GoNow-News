@@ -47,7 +47,7 @@ const state = {
   learnedLessons: JSON.parse(localStorage.getItem('learnedLessons')) || [],
   wikipediaEvents: [],
   comments: {},
-  currentRoute: window.location.hash || '#home',
+  currentRoute: window.location.pathname === '/' ? '/home' : window.location.pathname,
   viewMode: localStorage.getItem('viewMode') || 'grid'
 };
 
@@ -138,7 +138,21 @@ function init() {
   });
 
   // Routing
-  window.addEventListener('hashchange', handleRoute);
+  window.addEventListener('popstate', handleRoute);
+  
+  // Listen for clicks on all internal links
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (link && link.href.startsWith(window.location.origin)) {
+      const path = link.getAttribute('href');
+      // If it's a relative path starting with / or something that isn't a hash anchor
+      if (path && !path.startsWith('#') && !path.includes('://')) {
+        e.preventDefault();
+        navigateTo(path);
+      }
+    }
+  });
+
   handleRoute();
 
   window.addEventListener('click', (e) => {
@@ -146,6 +160,13 @@ function init() {
     if (e.target === searchOverlay) searchOverlay.classList.remove('active');
   });
 }
+
+function navigateTo(path) {
+  window.history.pushState({}, '', path);
+  handleRoute();
+}
+
+window.navigateTo = navigateTo;
 
 async function fetchWikipediaEvents() {
   try {
@@ -223,65 +244,67 @@ window.toggleViewMode = (mode) => {
 
 // Routing Logic
 function handleRoute() {
-  const hash = window.location.hash || '#home';
-  state.currentRoute = hash;
+  const path = window.location.pathname === '/' ? '/home' : window.location.pathname;
+  state.currentRoute = path;
+  
+  // Close any open modals when navigating
+  modal.classList.remove('active');
+  searchOverlay.classList.remove('active');
+  document.body.style.overflow = '';
   
   document.querySelectorAll('.nav-links a').forEach(link => {
-    link.classList.toggle('active', link.getAttribute('href') === hash);
+    const href = link.getAttribute('href');
+    link.classList.toggle('active', href === path);
   });
 
-  renderPage(hash);
+  renderPage(path);
   window.scrollTo(0, 0);
 }
 
-function renderPage(hash) {
-  // Clear modal and search when navigating
-  modal.classList.remove('active');
-  searchOverlay.classList.remove('active');
-
+function renderPage(path) {
   mainContent.innerHTML = '';
   const container = document.createElement('div');
   container.className = 'container fade-in';
 
   let pageTitle = 'GoNow | Latest News';
 
-  if (hash === '#home') {
+  if (path === '/home') {
     renderHome(container);
-  } else if (hash === '#politics') {
+  } else if (path === '/politics') {
     pageTitle = 'Politics News | GoNow';
     renderCategory(container, 'Politics', state.news.filter(n => n.category === 'Politics'));
-  } else if (hash === '#football') {
+  } else if (path === '/football') {
     pageTitle = 'Football News & Updates | GoNow';
     renderCategory(container, 'Football', state.news.filter(n => n.category === 'Football'));
-  } else if (hash === '#entertainment') {
+  } else if (path === '/entertainment') {
     pageTitle = 'Entertainment & Trends | GoNow';
     renderCategory(container, 'Entertainment', state.news.filter(n => n.category === 'Entertainment'));
-  } else if (hash === '#technology') {
+  } else if (path === '/technology') {
     pageTitle = 'Tech News & Innovation | GoNow';
     renderCategory(container, 'Technology', state.news.filter(n => n.category === 'Technology'));
-  } else if (hash === '#html') {
+  } else if (path === '/html') {
     pageTitle = 'Learn HTML Daily | GoNow';
     renderCategory(container, 'Learn HTML Daily', htmlLessons, 'html');
-  } else if (hash === '#daily') {
+  } else if (path === '/daily') {
     pageTitle = 'Daily Digest | GoNow';
     renderDaily(container);
-  } else if (hash === '#saved') {
+  } else if (path === '/saved') {
     pageTitle = 'Your Saved Articles | GoNow';
     renderSaved(container);
-  } else if (hash === '#about') {
+  } else if (path === '/about') {
     pageTitle = 'About Us | GoNow News Portal';
     renderAbout(container);
-  } else if (hash === '#admin') {
+  } else if (path === '/admin') {
     pageTitle = 'Admin Board | GoNow';
     renderAdmin(container);
-  } else if (hash.startsWith('#article/')) {
-    const id = hash.split('/')[1];
+  } else if (path.startsWith('/article/')) {
+    const id = path.split('/')[2];
     const article = state.news.find(n => n.id === id);
     if (article) {
       pageTitle = `${article.title} | GoNow`;
       openDetail(id, 'news');
     } else {
-      window.location.hash = '#home';
+      navigateTo('/home');
     }
   }
 
@@ -787,23 +810,25 @@ function createNewsCard(item) {
   const isSaved = state.savedItems.some(s => s.id === item.id);
   return `
     <article class="card" data-id="${item.id}" data-type="news">
-      <div class="card-img-wrapper">
-        <img src="${item.image}" alt="${item.title}" class="card-img" loading="lazy">
-      </div>
-      <div class="card-content">
-        <div class="card-meta">
-          <span class="badge">${item.category}</span>
-          <span>${item.readTime}</span>
+      <a href="/article/${item.id}" class="card-link-wrapper" style="text-decoration: none; color: inherit; display: block; height: 100%;">
+        <div class="card-img-wrapper">
+          <img src="${item.image}" alt="${item.title}" class="card-img" loading="lazy">
         </div>
-        <h3 class="card-title">${item.title}</h3>
-        <p class="card-excerpt">${item.excerpt}</p>
-        <div class="card-footer">
-          <span>${item.date}</span>
-          <button class="save-btn ${isSaved ? 'text-primary' : ''}" onclick="event.stopPropagation(); toggleSave('${item.id}', 'news')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-          </button>
+        <div class="card-content">
+          <div class="card-meta">
+            <span class="badge">${item.category}</span>
+            <span>${item.readTime}</span>
+          </div>
+          <h3 class="card-title">${item.title}</h3>
+          <p class="card-excerpt">${item.excerpt}</p>
+          <div class="card-footer">
+            <span>${item.date}</span>
+            <button class="save-btn ${isSaved ? 'text-primary' : ''}" onclick="event.preventDefault(); event.stopPropagation(); toggleSave('${item.id}', 'news')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+            </button>
+          </div>
         </div>
-      </div>
+      </a>
     </article>
   `;
 }
