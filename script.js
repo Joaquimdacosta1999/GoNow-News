@@ -79,24 +79,29 @@ function extractImage(item, category) {
   
   // Look for any image link that isn't a tracking pixel
   // Expanded regex for diverse source formats
-  const allImages = combined.match(/src=["']([^"'>]+\.(?:jpg|jpeg|png|webp|gif|svg)[^"'>]*)["']/gi);
+  const allImages = combined.match(/src=["']([^"'>]+\.(?:jpg|jpeg|png|webp|gif|svg|avif)[^"'>]*)["']/gi);
   if (allImages) {
     for (const img of allImages) {
       const srcMatch = img.match(/src=["']([^"'>]+)["']/i);
       if (srcMatch && srcMatch[1]) {
         const src = srcMatch[1];
-        if (!src.includes('pixel') && !src.includes('analytics') && !src.includes('doubleclick') && !src.includes('feedburner') && src.length > 20) {
+        // Filter out tiny icons, tracking pixels, and low-quality placeholders
+        const isBad = src.includes('pixel') || src.includes('analytics') || src.includes('doubleclick') || src.includes('feedburner') || src.includes('icon') || src.includes('logo');
+        if (!isBad && src.length > 25) {
           return src;
         }
       }
     }
   }
 
-  // 3. Standalone URL check
+  // 3. Standalone URL check for media tags often missed by RSS2JSON
+  const mediaContentMatch = combined.match(/url=["']([^"'>]+\.(?:jpg|jpeg|png|webp))["']/i);
+  if (mediaContentMatch) return mediaContentMatch[1];
+
   const standaloneUrlMatch = combined.match(/https?:\/\/[^"'\s<>]+?\.(?:jpg|jpeg|png|webp|gif)/i);
   if (standaloneUrlMatch) return standaloneUrlMatch[0];
 
-  // 4. Fallback to category default
+  // 4. Fallback to category default (high quality Unsplash)
   return getDefaultImage(category);
 }
 
@@ -145,20 +150,29 @@ async function syncAllNews() {
         const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&t=${cacheBuster}`);
         const data = await response.json();
         if (data.status === 'ok' && data.items && data.items.length > 0) {
-          const items = data.items.map((item) => ({
-            id: `auto-${name.toLowerCase()}-${Math.random().toString(36).substr(2, 9)}`,
-            title: item.title,
-            excerpt: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 2000) + '...' : 'Latest world news and expert analysis.',
-            content: item.content || item.description,
-            image: extractImage(item, name),
-            category: name,
-            date: item.pubDate,
-            timestamp: new Date(item.pubDate).getTime(),
-            readTime: `${Math.floor(Math.random() * 5) + 3} min read`,
-            author: `GoNow ${name} Desk`,
-            isAuto: true,
-            source: item.link
-          }));
+          const items = data.items.map((item) => {
+            const pubDate = new Date(item.pubDate);
+            const formattedDate = pubDate.toLocaleDateString('en-US', { 
+              month: 'long', 
+              day: 'numeric', 
+              year: 'numeric' 
+            });
+
+            return {
+              id: `auto-${name.toLowerCase()}-${Math.random().toString(36).substr(2, 9)}`,
+              title: item.title,
+              excerpt: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 2500) + '...' : 'Latest world news and expert analysis from our global desks.',
+              content: item.content || item.description,
+              image: extractImage(item, name),
+              category: name,
+              date: formattedDate,
+              timestamp: pubDate.getTime(),
+              readTime: `${Math.floor(Math.random() * 5) + 3} min read`,
+              author: `GoNow ${name} Desk`,
+              isAuto: true,
+              source: item.link
+            };
+          });
           categoryNews = [...categoryNews, ...items];
         }
       } catch (e) {
@@ -533,8 +547,10 @@ function renderPage(path) {
 
   // Helper to set meta tags
   const setMeta = (selector, attr, value) => {
-    const el = document.querySelector(selector);
-    if (el) el.setAttribute(attr, value);
+    const els = document.querySelectorAll(selector);
+    els.forEach(el => {
+      if (el) el.setAttribute(attr, value);
+    });
   };
 
   setMeta('meta[name="description"]', 'content', pageDescription);
@@ -546,12 +562,15 @@ function renderPage(path) {
   setMeta('meta[property="og:image"]', 'content', pageImage);
   setMeta('meta[property="og:url"]', 'content', currentUrl);
   setMeta('meta[property="og:type"]', 'content', pageType);
+  setMeta('meta[property="og:site_name"]', 'content', 'GoNow');
 
   // Social: Twitter Tags
   setMeta('meta[name="twitter:title"]', 'content', pageTitle);
   setMeta('meta[name="twitter:description"]', 'content', pageDescription);
   setMeta('meta[name="twitter:image"]', 'content', pageImage);
   setMeta('meta[name="twitter:url"]', 'content', currentUrl);
+  setMeta('meta[name="twitter:site"]', 'content', '@gonow247');
+  setMeta('meta[name="twitter:creator"]', 'content', '@gonow247');
 
   mainContent.appendChild(container);
   // Re-attach listeners now that the content is in the DOM
