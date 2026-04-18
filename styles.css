@@ -850,6 +850,24 @@ footer {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.footer-newsletter-row {
+  margin-top: 50px;
+}
+
+@media (max-width: 900px) {
+  .footer-newsletter-row {
+    padding: 30px !important;
+  }
+  .nl-grid {
+    grid-template-columns: 1fr !important;
+    text-align: center;
+    gap: 20px !important;
+  }
+  .newsletter-form-footer {
+    width: 100%;
+  }
+}
+
 /* Related articles grid tweak */
 .related-section .news-grid {
   gap: 15px;

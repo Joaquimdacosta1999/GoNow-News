@@ -352,29 +352,54 @@ function init() {
 }
 
 function initNewsletter() {
-  const form = document.getElementById('newsletter-form');
+  const forms = [
+    document.getElementById('newsletter-form'),
+    document.getElementById('newsletter-form-footer')
+  ];
+  
   const status = document.getElementById('newsletter-status');
-  if (!form) return;
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = form.querySelector('input').value;
-    status.style.display = 'block';
-    status.innerText = 'Subscribing...';
-    
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      status.innerText = 'Success! Welcome to GoNow.';
-      status.style.color = '#10b981';
-      form.reset();
-      setTimeout(() => {
-        status.style.display = 'none';
-      }, 3000);
-    } catch (error) {
-      status.innerText = 'Error subscribing. Try again.';
-      status.style.color = '#ef4444';
-    }
+  forms.forEach(form => {
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = form.querySelector('input');
+      const btn = form.querySelector('button');
+      const originalBtnText = btn.innerText;
+
+      btn.disabled = true;
+      btn.innerText = 'WAIT...';
+      
+      try {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        if (status) {
+          status.style.display = 'block';
+          status.innerText = 'Success! Welcome to GoNow.';
+          status.style.color = '#10b981';
+        } else {
+          btn.innerText = 'SUCCESS!';
+          btn.style.background = '#10b981';
+        }
+        
+        form.reset();
+        setTimeout(() => {
+          if (status) status.style.display = 'none';
+          btn.innerText = originalBtnText;
+          btn.disabled = false;
+          btn.style.background = '';
+        }, 3000);
+      } catch (error) {
+        if (status) {
+          status.innerText = 'Error subscribing. Try again.';
+          status.style.color = '#ef4444';
+        } else {
+          btn.innerText = 'ERROR';
+        }
+        btn.disabled = false;
+      }
+    });
   });
 }
 function navigateTo(path) {
