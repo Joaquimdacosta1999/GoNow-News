@@ -652,31 +652,73 @@ async function fetchCryptoData() {
 
 // Auth Logic
 async function handleAuth() {
-  console.log('handleAuth triggered, current user:', state.user);
   if (state.user) {
     try {
       await signOut(auth);
-      console.log('Sign out successful');
     } catch (error) {
       console.error('Sign out error:', error);
-      alert('Sign out failed: ' + error.message);
     }
   } else {
+    showAuthModal();
+  }
+}
+
+function showAuthModal() {
+  if (!modal || !modalBody) return;
+  
+  modalBody.innerHTML = `
+    <div style="padding: 40px; text-align: center;">
+      <div style="margin-bottom: 30px;">
+        <div style="width: 64px; height: 64px; background: var(--primary-color); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/><path d="m13 10-2 4h4l-2 4"/></svg>
+        </div>
+        <h2 style="font-size: 2rem; margin-bottom: 12px; font-weight: 800; letter-spacing: -0.5px;">Join the GoNow Intelligence</h2>
+        <p style="color: var(--text-muted); font-size: 1.1rem; line-height: 1.6; max-width: 400px; margin: 0 auto;">
+          Unlock exclusive news alerts, follow your favorite topics, and stay ahead with real-time global insights.
+        </p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; max-width: 350px; margin: 0 auto;">
+        <button id="google-auth-btn" class="submit-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; height: 56px; font-size: 1rem; background: white; color: #1a1a1a; border: 1px solid #ddd;">
+          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c3.11 0 5.72-1.03 7.63-2.8l-3.57-2.77c-.98.66-2.23 1.06-4.06 1.06-3.12 0-5.77-2.12-6.71-4.98H1.63v2.87C3.53 20.39 7.49 23 12 23z" fill="#34A853"/><path d="M5.29 13.51c-.24-.71-.38-1.47-.38-2.51s.14-1.8.38-2.51V5.63H1.63C.59 7.73 0 10.05 0 12.5s.59 4.77 1.63 6.87l3.66-2.86z" fill="#FBBC05"/><path d="M12 4.77c1.69 0 3.21.58 4.41 1.72l3.32-3.32C17.71 1.05 15.11 0 12 0 7.49 0 3.53 2.61 1.63 6.63l3.66 2.87c.94-2.86 3.59-4.98 6.71-4.98z" fill="#EA4335"/></svg>
+          Continue with Google
+        </button>
+        
+        <div style="display: flex; align-items: center; gap: 15px; margin: 10px 0;">
+          <hr style="flex: 1; border: 0; border-top: 1px solid var(--border-color);">
+          <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">or</span>
+          <hr style="flex: 1; border: 0; border-top: 1px solid var(--border-color);">
+        </div>
+
+        <div style="text-align: left; margin-bottom: 20px;">
+          <label style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 8px;">EMAIL ADDRESS</label>
+          <input type="email" placeholder="name@company.com" style="width: 100%; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+        </div>
+        
+        <button onclick="alert('Email registration is being optimized. Please use Google for instant access.')" class="submit-btn" style="width: 100%; height: 56px; font-size: 1rem; letter-spacing: 1px;">SIGN UP WITH EMAIL</button>
+      </div>
+
+      <p style="margin-top: 30px; font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+        By continuing, you agree to receive daily news notifications and accept our <a href="/terms" style="color: var(--primary-color);">Terms of Service</a>.
+      </p>
+    </div>
+  `;
+  
+  modal.classList.add('active');
+  
+  document.getElementById('google-auth-btn').addEventListener('click', async () => {
     try {
-      console.log('Starting Google Sign-In...');
-      const result = await signInWithPopup(auth, googleProvider);
-      console.log('Sign-in successful:', result.user.email);
+      modal.classList.remove('active');
+      await signInWithPopup(auth, googleProvider);
     } catch (error) {
       console.error('Auth Error:', error);
-      if (error.code === 'auth/popup-blocked') {
-        alert('Sign-in popup was blocked. Please allow popups for this site.');
-      } else if (error.code === 'auth/unauthorized-domain') {
-        alert('This domain is not authorized for Firebase Auth. Please check your Firebase Console settings.');
+      if (error.code === 'auth/unauthorized-domain') {
+        alert('Access Configuration Pending: The domain gonow247.com needs to be authorized in your security settings. Please contact the administrator.');
       } else {
-        alert('Authentication failed: ' + error.message);
+        alert('Registration failed. Please try again or check your popup settings.');
       }
     }
-  }
+  });
 }
 
 window.handleAuth = handleAuth;
@@ -1957,7 +1999,7 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled Rejection at:', event.promise, 'reason:', event.reason);
   const message = event.reason?.message || (typeof event.reason === 'string' ? event.reason : 'Unknown error');
   if (message.includes('permission-denied')) {
-    alert('Permission Denied: You are not authorized to perform this action.');
+    alert('Subscription Update: Please ensure you are logged in to follow topics or save articles.');
   } else {
     // Quietly log other rejections to avoid bothering users if they are minor
     console.warn('Silent caught rejection:', message);
