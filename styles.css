@@ -1108,6 +1108,11 @@ footer {
 .text-primary { color: var(--primary-color); }
 .mt-4 { margin-top: 1rem; }
 .mb-4 { margin-bottom: 1rem; }
+.font-bold { font-weight: 700; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+.text-green-500 { color: #10b981; }
+.text-red-500 { color: #ef4444; }
+.text-gray-500 { color: #6b7280; }
 
 /* Ad Styling */
 .ad-container {

@@ -244,45 +244,51 @@ function init() {
 
   // Auth State Listener
   onAuthStateChanged(auth, async (user) => {
-    state.user = user;
-    state.isAuthInitialized = true;
-    
-    if (user) {
-      authBtn.title = 'Logout';
-      authBtn.innerHTML = `<img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + user.displayName}" alt="User" style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent-color);">`;
-      
-      try {
-        // Get or create user profile
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          state.userProfile = userDoc.data();
-        } else {
-          const newProfile = {
-            uid: user.uid,
-            email: user.email,
-            role: 'user',
-            displayName: user.displayName,
-            createdAt: serverTimestamp()
-          };
-          await setDoc(doc(db, 'users', user.uid), newProfile);
-          state.userProfile = newProfile;
+    try {
+      state.user = user;
+      state.isAuthInitialized = true;
+      const adminLink = document.getElementById('admin-link');
+      const authBtn = document.getElementById('auth-btn');
+
+      if (user) {
+        authBtn.title = 'Logout';
+        authBtn.innerHTML = `<img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + user.displayName}" alt="User" style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent-color);">`;
+        
+        try {
+          // Get or create user profile
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            state.userProfile = userDoc.data();
+          } else {
+            const newProfile = {
+              uid: user.uid,
+              email: user.email,
+              role: 'user',
+              displayName: user.displayName,
+              createdAt: serverTimestamp()
+            };
+            await setDoc(doc(db, 'users', user.uid), newProfile);
+            state.userProfile = newProfile;
+          }
+        } catch (error) {
+          console.error('Profile fetch error:', error);
         }
-      } catch (error) {
-        console.error('Profile fetch error:', error);
+        
+        // Show admin link if admin
+        const isAdmin = state.userProfile?.role === 'admin' || user.email === 'joaquimdacosta1999@gmail.com';
+        if (isAdmin && adminLink) {
+          adminLink.classList.remove('hidden');
+        }
+      } else {
+        state.userProfile = null;
+        authBtn.title = 'Login';
+        authBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+        if (adminLink) adminLink.classList.add('hidden');
       }
-      
-      // Show admin link if admin
-      const isAdmin = state.userProfile?.role === 'admin' || user.email === 'joaquimdacosta1999@gmail.com';
-      if (isAdmin) {
-        adminLink.classList.remove('hidden');
-      }
-    } else {
-      state.userProfile = null;
-      authBtn.title = 'Login';
-      authBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
-      adminLink.classList.add('hidden');
+      handleRoute();
+    } catch (err) {
+      console.error('Auth state change error:', err);
     }
-    handleRoute();
   });
 
   // Real-time News Listener
@@ -292,8 +298,10 @@ function init() {
     state.newsLoaded = true;
     handleRoute();
   }, (error) => {
-    state.newsLoaded = true; // Still mark as loaded to clear spinner
-    handleFirestoreError(error, OperationType.LIST, 'news');
+    try {
+      handleFirestoreError(error, OperationType.LIST, 'news');
+    } catch (e) { /* Caught fatal throw to prevent unhandled rejection */ }
+    state.newsLoaded = true;
     handleRoute();
   });
 
@@ -314,10 +322,10 @@ function init() {
   });
 
   handleRoute();
-  fetchWikipediaEvents();
-  fetchFinanceData();
-  fetchCryptoData();
-  syncAllNews();
+  fetchWikipediaEvents().catch(e => console.error('Wikipedia Load Error:', e));
+  fetchFinanceData().catch(e => console.error('Finance Load Error:', e));
+  fetchCryptoData().catch(e => console.error('Crypto Load Error:', e));
+  syncAllNews().catch(e => console.error('Sync Init Error:', e));
   // Refresh all news every 5 minutes for instant updates
   setInterval(syncAllNews, 300000);
 
@@ -1412,7 +1420,11 @@ function openDetail(id, type) {
   onSnapshot(q, (snapshot) => {
     const comments = snapshot.docs.map(doc => doc.data());
     updateCommentsList(comments);
-  }, (error) => handleFirestoreError(error, OperationType.LIST, 'comments'));
+  }, (error) => {
+    try {
+      handleFirestoreError(error, OperationType.LIST, 'comments');
+    } catch (e) { /* Caught fatal throw */ }
+  });
 
   modal.classList.add('active');
 }
@@ -1540,10 +1552,30 @@ window.toggleLearned = (id) => {
 };
 
 window.copyCode = (btn, code) => {
+  if (!navigator.clipboard) {
+    // Fallback for non-secure contexts
+    const textArea = document.createElement("textarea");
+    textArea.value = code;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      const originalText = btn.innerText;
+      btn.innerText = 'Copied!';
+      setTimeout(() => btn.innerText = originalText, 2000);
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+    }
+    document.body.removeChild(textArea);
+    return;
+  }
   navigator.clipboard.writeText(code).then(() => {
     const originalText = btn.innerText;
     btn.innerText = 'Copied!';
     setTimeout(() => btn.innerText = originalText, 2000);
+  }).catch(err => {
+    console.error('Clipboard copy failed:', err);
+    // Silent fail or alert
   });
 };
 
@@ -1618,11 +1650,13 @@ function escapeHtml(unsafe) {
 
 // Global Error Handling
 window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled Rejection:', event.reason);
-  if (event.reason?.message?.includes('permission-denied')) {
+  console.error('Unhandled Rejection at:', event.promise, 'reason:', event.reason);
+  const message = event.reason?.message || (typeof event.reason === 'string' ? event.reason : 'Unknown error');
+  if (message.includes('permission-denied')) {
     alert('Permission Denied: You are not authorized to perform this action.');
   } else {
-    alert('An unexpected error occurred: ' + (event.reason?.message || 'Unknown error'));
+    // Quietly log other rejections to avoid bothering users if they are minor
+    console.warn('Silent caught rejection:', message);
   }
 });
 
