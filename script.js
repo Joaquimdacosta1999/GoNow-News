@@ -1963,24 +1963,67 @@ window.shareItem = (title) => {
 };
 
 function handleSearch(e) {
-  const query = e.target.value.toLowerCase();
-  if (!query) {
-    searchResults.innerHTML = '';
+  const queryText = e.target.value.toLowerCase().trim();
+  if (!queryText || queryText.length < 2) {
+    searchResults.innerHTML = queryText.length === 1 ? '<p class="notif-empty">Keep typing...</p>' : '';
     return;
   }
-  const allItems = [...state.news, ...htmlLessons];
+
+  // Aggregate all possible search items
+  const allItems = [
+    ...state.news.map(item => ({ ...item, type: 'news' })),
+    ...state.autoNews.map(item => ({ ...item, type: 'news' })),
+    ...thingsToKnow.map((item, idx) => ({ ...item, id: `kt-${idx}`, type: 'knowledge', category: 'Knowledge' }))
+  ];
+
   const results = allItems.filter(item => 
-    item.title.toLowerCase().includes(query) || 
-    (item.excerpt && item.excerpt.toLowerCase().includes(query))
-  );
-  searchResults.innerHTML = results.map(item => `
-    <div class="trending-item" style="padding: 15px; border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="searchOverlay.classList.remove('active'); openDetail('${item.id}', '${item.category === 'HTML' ? 'html' : 'news'}')">
-      <div class="trending-content">
-        <span class="badge" style="font-size: 0.6rem; padding: 2px 6px;">${item.category}</span>
-        <h4 style="font-size: 1.1rem;">${item.title}</h4>
+    item.title?.toLowerCase().includes(queryText) || 
+    item.excerpt?.toLowerCase().includes(queryText) ||
+    item.category?.toLowerCase().includes(queryText) ||
+    (item.author && item.author.toLowerCase().includes(queryText))
+  ).slice(0, 15); // Limit results for efficiency
+
+  if (results.length === 0) {
+    searchResults.innerHTML = `
+      <div style="text-align: center; padding: 50px 0;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 20px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <p style="color: var(--text-muted); font-size: 1.1rem;">No matches found for "${queryText}"</p>
+        <p style="font-size: 0.9rem; margin-top: 10px;">Try searching for Politics, Tech, or historical events.</p>
+      </div>
+    `;
+    return;
+  }
+
+  searchResults.innerHTML = `
+    <div style="padding: 0 0 40px 0;">
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;">Found ${results.length} relevant results</p>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        ${results.map(item => {
+          const path = item.type === 'news' ? `/article/${item.id}` : '/things-to-know';
+          const icon = item.type === 'news' ? 
+            `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>` : 
+            `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg>`;
+          
+          return `
+            <div class="trending-item" style="padding: 20px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: flex-start; gap: 20px; transition: var(--transition);" 
+                 onclick="searchOverlay.classList.remove('active'); navigateTo('${path}')">
+              <div style="width: 40px; height: 40px; background: var(--accent-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--primary-color); flex-shrink: 0;">
+                ${icon}
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                  <span class="meta-label" style="font-size: 0.65rem; color: var(--primary-color);">${item.category.toUpperCase()}</span>
+                  ${item.timestamp ? `<span style="font-size: 0.7rem; color: var(--text-muted);">${formatDate(item.timestamp)}</span>` : ''}
+                </div>
+                <h4 style="font-size: 1.15rem; font-weight: 700; line-height: 1.3; margin-bottom: 8px;">${item.title}</h4>
+                <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${item.excerpt || ''}</p>
+              </div>
+            </div>
+          `;
+        }).join('')}
       </div>
     </div>
-  `).join('');
+  `;
 }
 
 function escapeHtml(unsafe) {
