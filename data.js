@@ -213,60 +213,45 @@ export const newsData = [
   }
 ];
 
-export const htmlLessons = [
+export const thingsToKnow = [
   {
-    id: 'h1',
-    category: 'HTML',
-    title: 'The Basic Structure',
-    tip: 'Every HTML document starts with a <!DOCTYPE html> declaration followed by the <html> tag.',
-    code: `<!DOCTYPE html>
-<html>
-<head>
-  <title>My Page</title>
-</head>
-<body>
-  <h1>Hello World</h1>
-</body>
-</html>`,
+    id: 'k1',
+    category: 'Knowledge',
+    title: 'The Speed of Light',
+    tip: 'Light travels at approximately 299,792,458 meters per second in a vacuum.',
+    description: 'This fundamental constant of nature is the maximum speed at which all conventional matter and information in the universe can travel.',
     date: '2024-05-10'
   },
   {
-    id: 'h2',
-    category: 'HTML',
-    title: 'Creating Links',
-    tip: 'Use the <a> tag with the "href" attribute to create a link to another page.',
-    code: `<a href="https://google.com">Go to Google</a>`,
+    id: 'k2',
+    category: 'History',
+    title: 'The Great Pyramid',
+    tip: 'The Great Pyramid of Giza was the tallest man-made structure for over 3,800 years.',
+    description: 'Constructed around 2560 BCE, it is the oldest of the Seven Wonders of the Ancient World and the only one to remain largely intact.',
     date: '2024-05-09'
   },
   {
-    id: 'h3',
-    category: 'HTML',
-    title: 'Adding Images',
-    tip: 'Use the <img> tag with "src" for the image path and "alt" for a text description.',
-    code: `<img src="image.jpg" alt="A beautiful sunset">`,
+    id: 'k3',
+    category: 'Science',
+    title: 'The Human Brain',
+    tip: 'Your brain generates enough electricity to power a small light bulb.',
+    description: 'While you are awake, your brain produces between 12 and 25 watts of electricity – enough to light a small LED bulb!',
     date: '2024-05-08'
   },
   {
-    id: 'h4',
-    category: 'HTML',
-    title: 'Lists',
-    tip: 'Use <ul> for unordered (bulleted) lists and <ol> for ordered (numbered) lists.',
-    code: `<ul>
-  <li>Apples</li>
-  <li>Bananas</li>
-</ul>`,
+    id: 'k4',
+    category: 'Geography',
+    title: 'Mount Everest Growth',
+    tip: 'Mount Everest grows about 4 millimeters taller every year.',
+    description: 'Due to the collision of the Indian and Eurasian tectonic plates, the Himalayas are still rising today.',
     date: '2024-05-07'
   },
   {
-    id: 'h5',
-    category: 'HTML',
-    title: 'Forms',
-    tip: 'Use the <form> tag to collect user input. The <input> tag is used for text fields.',
-    code: `<form>
-  <label>Name:</label>
-  <input type="text" name="username">
-  <button type="submit">Submit</button>
-</form>`,
+    id: 'k5',
+    category: 'Oceanography',
+    title: 'The Mariana Trench',
+    tip: 'The deepest part of the ocean is deeper than Mount Everest is tall.',
+    description: 'The Challenger Deep in the Mariana Trench reaches a depth of about 10,935 meters (35,876 feet).',
     date: '2024-05-06'
   }
 ];

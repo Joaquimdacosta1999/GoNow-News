@@ -30,7 +30,7 @@ import {
 import { marked } from 'marked';
 
 import { 
-  htmlLessons, 
+  thingsToKnow, 
   dailyHappenings, 
   dailyQuotes 
 } from './data.js';
@@ -282,9 +282,9 @@ function renderPage(path) {
   } else if (path === '/technology') {
     pageTitle = 'Tech News & Innovation | GoNow';
     renderCategory(container, 'Technology', state.news.filter(n => n.category === 'Technology'));
-  } else if (path === '/html') {
-    pageTitle = 'Learn HTML Daily | GoNow';
-    renderCategory(container, 'Learn HTML Daily', htmlLessons, 'html');
+  } else if (path === '/things-to-know') {
+    pageTitle = 'Interesting Things To Know | GoNow';
+    renderCategory(container, 'Things To Know', thingsToKnow, 'knowledge');
   } else if (path === '/daily') {
     pageTitle = 'Daily Digest | GoNow';
     renderDaily(container);
@@ -333,7 +333,7 @@ function renderHome(container) {
         <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); opacity: 0.5; margin-bottom: 20px;"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
         <h1 style="font-size: 2rem; margin-bottom: 10px;">The news desk is currently quiet</h1>
         <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto;">Our editors are working on new stories. Check back in a few moments for the latest updates.</p>
-        <a href="#admin" class="submit-btn" style="display: inline-block; margin-top: 30px; padding: 12px 30px;">Publish First Article</a>
+        <a href="/admin" class="submit-btn" style="display: inline-block; margin-top: 30px; padding: 12px 30px;">Publish First Article</a>
       </div>
     `;
     return;
@@ -344,11 +344,12 @@ function renderHome(container) {
   const trending = state.news.slice(0, 5);
   const happeningsList = state.wikipediaEvents.length > 0 ? state.wikipediaEvents : dailyHappenings[0].events;
   const quote = dailyQuotes[0];
+  const knowledge = thingsToKnow[0];
   const isList = state.viewMode === 'list';
 
   container.innerHTML = `
     <section class="hero">
-      <div class="hero-card" onclick="${featured.id ? `window.location.hash = '#article/${featured.id}'` : ''}" style="cursor: pointer;">
+      <div class="hero-card" onclick="${featured.id ? `navigateTo('/article/${featured.id}')` : ''}" style="cursor: pointer;">
         <div class="hero-img-wrapper">
           <img src="${featured.image}" alt="${featured.title}" class="hero-img" loading="lazy">
         </div>
@@ -393,7 +394,7 @@ function renderHome(container) {
         <div class="sidebar-section">
           <h2 class="section-title">Trending</h2>
           ${trending.map((item, i) => `
-            <div class="trending-item" onclick="window.location.hash = '#article/${item.id}'">
+            <div class="trending-item" onclick="navigateTo('/article/${item.id}')">
               <span class="trending-num">0${i + 1}</span>
               <div class="trending-content">
                 <span class="badge" style="font-size: 0.6rem; padding: 2px 6px;">${item.category}</span>
@@ -404,6 +405,13 @@ function renderHome(container) {
         </div>
 
         <div class="sidebar-section">
+          <div class="knowledge-box" style="background: var(--card-bg); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border-color); margin-bottom: 25px;">
+             <span class="badge" style="background: #8b5cf6; margin-bottom: 10px;">Did You Know?</span>
+             <h4 style="margin-bottom: 10px; font-size: 1.1rem;">${knowledge.title}</h4>
+             <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">${knowledge.tip}</p>
+             <a href="/things-to-know" class="btn btn-outline" style="width: 100%; margin-top: 15px; text-align: center; display: block;">See More Knowledge</a>
+          </div>
+
           <div class="daily-box">
             <h3>Daily Happenings (via Wikipedia)</h3>
             <ul class="daily-list">
@@ -441,7 +449,7 @@ function renderCategory(container, title, items, type = 'news') {
       ${items.length > 0 ? items.map((item, index) => {
         let html = '';
         if (type === 'news') html = createNewsCard(item);
-        if (type === 'html') html = createHtmlCard(item);
+        if (type === 'knowledge') html = createKnowledgeCard(item);
         
         // Insert ad after 3rd item
         if (index === 2) {
@@ -456,15 +464,15 @@ function renderCategory(container, title, items, type = 'news') {
 function renderDaily(container) {
   const quote = dailyQuotes[Math.floor(Math.random() * dailyQuotes.length)];
   const happeningsList = state.wikipediaEvents.length > 0 ? state.wikipediaEvents : dailyHappenings[0].events;
-  const todayLesson = htmlLessons[0];
+  const knowledge = thingsToKnow[0];
 
   container.innerHTML = `
     <h1 class="section-title" style="font-size: 2rem; margin-top: 40px;">Daily Digest</h1>
     <div class="main-grid">
       <div>
         <section class="mb-4">
-          <h2 class="section-title">Learn HTML Daily</h2>
-          ${createHtmlCard(todayLesson)}
+          <h2 class="section-title">Knowledge of the Day</h2>
+          ${createKnowledgeCard(knowledge)}
         </section>
         <section class="mt-4">
           <h2 class="section-title">On This Day (via Wikipedia)</h2>
@@ -833,30 +841,23 @@ function createNewsCard(item) {
   `;
 }
 
-function createHtmlCard(item) {
+function createKnowledgeCard(item) {
   const isSaved = state.savedItems.some(s => s.id === item.id);
-  const isLearned = state.learnedLessons.includes(item.id);
   return `
-    <div class="lesson-card" data-id="${item.id}" data-type="html">
+    <div class="lesson-card" data-id="${item.id}" data-type="knowledge">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
         <div>
-          <span class="badge" style="background: #e34f26;">HTML TIP</span>
+          <span class="badge" style="background: #8b5cf6;">${item.category.toUpperCase()}</span>
           <h3 style="margin-top: 10px;">${item.title}</h3>
         </div>
         <div style="display: flex; gap: 10px;">
-          <button class="save-btn ${isSaved ? 'text-primary' : ''}" onclick="toggleSave('${item.id}', 'html')">
+          <button class="save-btn ${isSaved ? 'text-primary' : ''}" onclick="toggleSave('${item.id}', 'knowledge')">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
           </button>
         </div>
       </div>
-      <p style="margin-bottom: 15px;">${item.tip}</p>
-      <div class="code-block">
-        <button class="copy-btn" onclick="copyCode(this, \`${item.code.replace(/`/g, '\\`')}\`)">Copy</button>
-        <pre><code>${escapeHtml(item.code)}</code></pre>
-      </div>
-      <button class="submit-btn" style="width: 100%; background: ${isLearned ? '#22c55e' : 'var(--primary-color)'}" onclick="toggleLearned('${item.id}')">
-        ${isLearned ? '✓ Learned' : 'Mark as Learned'}
-      </button>
+      <p style="margin-bottom: 15px; font-weight: 600; color: var(--text-color);">${item.tip}</p>
+      <p style="color: var(--text-muted); line-height: 1.6;">${item.description}</p>
     </div>
   `;
 }
