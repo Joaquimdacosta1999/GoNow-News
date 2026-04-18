@@ -67,6 +67,30 @@ const modalBody = document.getElementById('modal-body');
 const authBtn = document.getElementById('auth-btn');
 const adminLink = document.getElementById('admin-link');
 
+// Helper to extract image from RSS item
+function extractImage(item, category) {
+  // 1. High priority standard fields
+  if (item.thumbnail && item.thumbnail.length > 25) return item.thumbnail;
+  if (item.enclosure?.link && item.enclosure.link.length > 25) return item.enclosure.link;
+  
+  // 2. Scan internal content/description for high-res images first
+  const combined = (item.content || '') + (item.description || '');
+  
+  // Look for any image link that isn't a tracking pixel
+  const allImages = combined.match(/src="([^">]+\.(?:jpg|jpeg|png|webp|gif)[^">]*)"/gi);
+  if (allImages) {
+    for (const img of allImages) {
+      const src = img.match(/src="([^">]+)"/i)[1];
+      if (!src.includes('pixel') && !src.includes('analytics') && !src.includes('feedburner') && src.length > 20) {
+        return src;
+      }
+    }
+  }
+
+  // 3. Fallback to category default
+  return getDefaultImage(category);
+}
+
 // Initialize
 async function syncAllNews() {
   const categoryConfigs = {
@@ -74,24 +98,30 @@ async function syncAllNews() {
       'https://moxie.foxnews.com/feed-publisher/politics.xml',
       'https://www.breitbart.com/politics/feed/',
       'https://www.washingtontimes.com/rss/headlines/news/politics/',
+      'https://www.washingtontimes.com/rss/headlines/business/politics/',
       'https://www.washingtonexaminer.com/feed/politics/',
       'https://nypost.com/politics/feed/'
     ],
     'Football': [
       'https://www.skysports.com/rss/12040',
       'https://www.football.london/rss.xml',
-      'https://www.sportsmole.co.uk/football/index.rss'
+      'https://www.sportsmole.co.uk/football/index.rss',
+      'https://www.90min.com/posts.rss'
     ],
     'Entertainment': [
       'https://moxie.foxnews.com/feed-publisher/entertainment.xml',
       'https://www.breitbart.com/entertainment/feed/',
       'https://www.washingtonexaminer.com/feed/entertainment/',
-      'https://nypost.com/entertainment/feed/'
+      'https://nypost.com/entertainment/feed/',
+      'https://variety.com/feed/'
     ],
     'Technology': [
+      'https://www.breitbart.com/tech/feed/',
+      'https://nypost.com/tech/feed/',
       'https://moxie.foxnews.com/feed-publisher/tech.xml',
       'https://www.washingtontimes.com/rss/headlines/news/technology/',
-      'https://www.washingtontimes.com/rss/headlines/business/technology/'
+      'https://www.washingtontimes.com/rss/headlines/business/technology/',
+      'https://www.dailywire.com/feed/'
     ]
   };
 
@@ -100,17 +130,17 @@ async function syncAllNews() {
   for (const [name, urls] of Object.entries(categoryConfigs)) {
     let categoryNews = [];
     for (const url of urls) {
-      if (categoryNews.length >= 15) break; 
+      if (categoryNews.length >= 20) break; 
       try {
         const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`);
         const data = await response.json();
         if (data.status === 'ok' && data.items && data.items.length > 0) {
-          const items = data.items.map((item, index) => ({
+          const items = data.items.map((item) => ({
             id: `auto-${name.toLowerCase()}-${Math.random().toString(36).substr(2, 9)}`,
             title: item.title,
-            excerpt: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 150) + '...' : 'Latest world news and analysis.',
+            excerpt: item.description ? item.description.replace(/<[^>]*>?/gm, '').substring(0, 155) + '...' : 'Latest world news and expert analysis.',
             content: item.content || item.description,
-            image: item.thumbnail || item.enclosure?.link || getDefaultImage(name),
+            image: extractImage(item, name),
             category: name,
             date: item.pubDate,
             timestamp: new Date(item.pubDate).getTime(),
@@ -125,7 +155,17 @@ async function syncAllNews() {
         console.warn(`Failed to fetch ${name} from ${url}`, e);
       }
     }
-    allFreshAutoNews = [...allFreshAutoNews, ...categoryNews];
+    // De-duplicate by title
+    const uniqueNews = [];
+    const titles = new Set();
+    categoryNews.forEach(item => {
+      if (!titles.has(item.title.toLowerCase())) {
+        titles.add(item.title.toLowerCase());
+        uniqueNews.push(item);
+      }
+    });
+    
+    allFreshAutoNews = [...allFreshAutoNews, ...uniqueNews];
   }
 
   if (allFreshAutoNews.length > 0) {
@@ -950,7 +990,7 @@ function createNewsCard(item) {
     <article class="card" data-id="${item.id}" data-type="news">
       <a href="/article/${item.id}" class="card-link-wrapper" style="text-decoration: none; color: inherit; display: block; height: 100%;">
         <div class="card-img-wrapper">
-          <img src="${item.image}" alt="${item.title}" class="card-img" loading="lazy">
+          <img src="${item.image}" alt="${item.title}" class="card-img" loading="lazy" onerror="this.onerror=null;this.src='${getDefaultImage(item.category)}'">
         </div>
         <div class="card-content">
           <div class="card-meta">
