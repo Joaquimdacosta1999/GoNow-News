@@ -28,6 +28,7 @@ import {
 } from './firebase.ts';
 
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 import { 
   thingsToKnow, 
@@ -223,6 +224,8 @@ function init() {
   searchInput.addEventListener('input', handleSearch);
   authBtn.addEventListener('click', handleAuth);
 
+  initNewsletter();
+
   // Auth State Listener
   onAuthStateChanged(auth, async (user) => {
     state.user = user;
@@ -314,6 +317,32 @@ function init() {
   });
 }
 
+function initNewsletter() {
+  const form = document.getElementById('newsletter-form');
+  const status = document.getElementById('newsletter-status');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = form.querySelector('input').value;
+    status.style.display = 'block';
+    status.innerText = 'Subscribing...';
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      status.innerText = 'Success! Welcome to GoNow.';
+      status.style.color = '#10b981';
+      form.reset();
+      setTimeout(() => {
+        status.style.display = 'none';
+      }, 3000);
+    } catch (error) {
+      status.innerText = 'Error subscribing. Try again.';
+      status.style.color = '#ef4444';
+    }
+  });
+}
 function navigateTo(path) {
   if (!path.startsWith('/article/')) {
     localStorage.setItem('lastPath', path);
@@ -1162,7 +1191,7 @@ function createNewsCard(item) {
     <article class="card" data-id="${item.id}" data-type="news">
       <a href="/article/${item.id}" class="card-link-wrapper" style="text-decoration: none; color: inherit; display: block; height: 100%;">
         <div class="card-img-wrapper">
-          <img src="${item.image}" alt="${item.title}" class="card-img" loading="lazy" onerror="this.onerror=null;this.src='${getDefaultImage(item.category)}'">
+          <img src="${item.image}" alt="${item.title}" class="card-img" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${getDefaultImage(item.category)}'">
         </div>
         <div class="card-content">
           <div class="card-meta">
@@ -1263,8 +1292,18 @@ function updateCommentsList(comments) {
 }
 
 function renderModalContent(item, type, isSaved, initialComments) {
+  const allNews = [...state.news, ...state.autoNews];
+  const relatedArticles = allNews
+    .filter(n => n.category === item.category && n.id !== item.id)
+    .sort(() => 0.5 - Math.random()) // Shuffle for better variety
+    .slice(0, 3);
+  
+  // Sanitize content
+  const rawContent = item.content || item.excerpt || 'No content available.';
+  const sanitizedHtml = DOMPurify.sanitize(marked.parse(rawContent));
+
   modalBody.innerHTML = `
-    <img src="${item.image}" alt="${item.title}" class="detail-img">
+    <img src="${item.image}" alt="${item.title}" class="detail-img" loading="lazy" decoding="async">
     <div class="detail-meta">
       <span class="badge">${item.category}</span>
       ${item.date ? `<span>${item.date}</span>` : ''}
@@ -1272,10 +1311,10 @@ function renderModalContent(item, type, isSaved, initialComments) {
     </div>
     <h1 class="detail-title">${item.title}</h1>
     ${createAdUnit('1111111111', 'horizontal')}
-    <div class="detail-body">
-      ${item.content ? `<div class="markdown-content">${marked.parse(item.content)}</div>` : ''}
+    <div class="detail-body markdown-content">
+      ${sanitizedHtml}
     </div>
-    <div class="card-footer mt-4">
+    <div class="card-footer mt-4" style="border: none; padding-top: 0;">
       <div style="display: flex; gap: 15px;">
         <button class="submit-btn" onclick="toggleSave('${item.id}', '${type}')">
           ${isSaved ? 'Unsave' : 'Save Item'}
@@ -1285,6 +1324,23 @@ function renderModalContent(item, type, isSaved, initialComments) {
         </button>
       </div>
     </div>
+    
+    <div class="related-section" style="margin-top: 50px; padding-top: 30px; border-top: 2px solid var(--border-color);">
+      <h3 style="margin-bottom: 20px;">More from ${item.category}</h3>
+      <div class="news-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        ${relatedArticles.map(rel => `
+          <div class="card" onclick="openDetail('${rel.id}', 'news')" style="cursor: pointer; min-height: auto;">
+            <div class="card-img-wrapper" style="aspect-ratio: 16/9;">
+              <img src="${rel.image}" alt="${rel.title}" class="card-img" loading="lazy" decoding="async">
+            </div>
+            <div class="card-content" style="padding: 12px;">
+              <h4 style="font-size: 0.9rem; -webkit-line-clamp: 2; line-height: 1.3;">${rel.title}</h4>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
     <section class="comments-section" style="margin-top: 40px; padding-top: 30px; border-top: 2px solid var(--border-color);">
       ${createAdUnit('2222222222', 'horizontal')}
       <h3 id="comment-count" style="margin-bottom: 25px;">Comments (0)</h3>

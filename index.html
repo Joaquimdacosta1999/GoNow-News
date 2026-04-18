@@ -94,18 +94,37 @@
           <button id="search-toggle" class="icon-btn" title="Search">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           </button>
-          <button id="theme-toggle" class="icon-btn" title="Toggle Theme">
+          <button id="theme-toggle" class="icon-btn" title="Toggle Theme" aria-label="Toggle Theme">
             <!-- Icon injected by JS -->
           </button>
-          <button class="mobile-menu-btn icon-btn" onclick="document.querySelector('.nav-links').classList.toggle('active')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+          <button class="mobile-menu-btn icon-btn" style="display: flex; background: var(--accent-color); padding: 10px; border-radius: 12px; margin-left: 5px; color: var(--primary-color);" onclick="document.querySelector('.nav-links').classList.toggle('active')" aria-label="Open Menu">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
           </button>
         </div>
       </div>
     </header>
 
     <main id="main-content">
-      <!-- Content injected by JS -->
+      <!-- SEO Skeleton Content -->
+      <div class="skeleton-view" style="padding: 40px 0;">
+        <h1 style="font-size: 2.5rem; margin-bottom: 20px;">Top Stories on GoNow Today</h1>
+        <p style="color: var(--text-muted); margin-bottom: 40px; font-size: 1.2rem;">Stay informed with the latest breaking news in Politics, Tech, Football, and Entertainment. Real-time updates every 5 minutes.</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+          <div style="background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border-color);">
+            <h2 style="font-size: 1.4rem; margin-bottom: 10px;">Historic Global Climate Agreement Signed</h2>
+            <p style="color: var(--text-muted);">World leaders in Geneva sign a landmark deal to reduce emissions by 50% by 2030, marking a new era in environmental policy.</p>
+          </div>
+          <div style="background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border-color);">
+            <h2 style="font-size: 1.4rem; margin-bottom: 10px;">AI Revolution: Empathy in Voice</h2>
+            <p style="color: var(--text-muted);">New machine learning models allow AI assistants to detect human emotions via vocal analysis, changing how we interact with robots.</p>
+          </div>
+          <div style="background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border-color);">
+            <h2 style="font-size: 1.4rem; margin-bottom: 10px;">Football: Underdogs Win Champions Cup</h2>
+            <p style="color: var(--text-muted);">A stunning last-minute goal secured a historic victory for league newcomers, upsetting the reigning giants in the finale.</p>
+          </div>
+        </div>
+      </div>
+      <!-- Real content will replace this via JS -->
     </main>
 
     <footer>
@@ -143,6 +162,15 @@
               <li><a href="/terms">Terms of Service</a></li>
               <li><a href="/saved">Saved Items</a></li>
             </ul>
+          </div>
+          <div class="footer-links" id="newsletter-section">
+            <h4>Newsletter</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Get the top stories delivered to your inbox daily.</p>
+            <form id="newsletter-form" style="display: flex; gap: 8px;">
+              <input type="email" placeholder="Email address" required style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color);">
+              <button type="submit" class="btn" style="background: var(--primary-color); color: white; padding: 10px 15px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">Join</button>
+            </form>
+            <div id="newsletter-status" style="margin-top: 10px; font-size: 0.8rem; display: none;"></div>
           </div>
         </div>
         <div class="footer-bottom">

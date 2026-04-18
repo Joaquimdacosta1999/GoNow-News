@@ -68,6 +68,12 @@ img {
   max-width: 100%;
   height: auto;
   display: block;
+  content-visibility: auto;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 4px;
 }
 
 button {
@@ -793,7 +799,34 @@ footer {
   gap: 15px;
 }
 
-/* Search Overlay */
+.newsletter-form input:focus {
+  outline: 2px solid var(--primary-color);
+  border-color: transparent;
+}
+
+.skeleton-view {
+  animation: fadeIn 1s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Related articles grid tweak */
+.related-section .news-grid {
+  gap: 15px;
+}
+
+.related-section .card {
+  box-shadow: none;
+  border-color: transparent;
+  background: transparent;
+}
+
+.related-section .card:hover {
+  transform: translateY(-2px);
+}
 .search-overlay {
   position: fixed;
   top: 0;
