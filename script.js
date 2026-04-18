@@ -118,6 +118,14 @@ async function syncAllNews() {
       'https://www.washingtonexaminer.com/feed/politics/',
       'https://nypost.com/politics/feed/'
     ],
+    'Business': [
+      'https://moxie.foxnews.com/feed-publisher/business.xml',
+      'https://www.breitbart.com/the-economy/feed/',
+      'https://www.washingtontimes.com/rss/headlines/business/',
+      'https://fortune.com/feed/',
+      'https://nypost.com/business/feed/',
+      'https://www.economist.com/business/rss.xml'
+    ],
     'Football': [
       'https://www.skysports.com/rss/12040',
       'https://www.football.london/rss.xml',
@@ -206,11 +214,12 @@ async function syncAllNews() {
   }
 }
 
-const pathRoutes = ['/home', '/politics', '/football', '/entertainment', '/technology'];
+const pathRoutes = ['/home', '/politics', '/business', '/football', '/entertainment', '/technology'];
 
 function getDefaultImage(cat) {
   const images = {
     'Politics': 'https://images.unsplash.com/photo-1541872703-74c5e44383f5?q=80&w=2000&auto=format&fit=crop',
+    'Business': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2000&auto=format&fit=crop',
     'Football': 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=2000&auto=format&fit=crop',
     'Entertainment': 'https://images.unsplash.com/photo-1499364615650-ec38552f4f34?q=80&w=2000&auto=format&fit=crop',
     'Technology': 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?q=80&w=2000&auto=format&fit=crop'
@@ -561,6 +570,12 @@ function renderPage(path) {
     pageImage = getDefaultImage('Technology');
     const combined = [...state.news.filter(n => n.category === 'Technology'), ...state.autoNews.filter(n => n.category === 'Technology')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Technology', combined);
+  } else if (path === '/business') {
+    pageTitle = 'Business & Finance News: Market Trends & Economy | GoNow';
+    pageDescription = 'Get the latest business news, stock market updates, and economic analysis. Stay ahead of the curve with GoNow Business.';
+    pageImage = getDefaultImage('Business');
+    const combined = [...state.news.filter(n => n.category === 'Business'), ...state.autoNews.filter(n => n.category === 'Business')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    renderCategory(container, 'Business', combined);
   } else if (path === '/things-to-know') {
     pageTitle = 'Things To Know: Facts & Deep Dives | GoNow';
     pageDescription = 'Expand your horizons with fascinating facts and deep dives into history, science, and more on the GoNow Knowledge Desk.';
@@ -726,6 +741,7 @@ function renderHome(container) {
   // BALANCED FEED LOGIC: Ensure all categories are represented on home page
   const newsByCategory = {
     'Politics': [],
+    'Business': [],
     'Football': [],
     'Entertainment': [],
     'Technology': []
