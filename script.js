@@ -709,6 +709,8 @@ function renderTerms(container) {
 
 function renderHome(container) {
   const happeningsList = state.wikipediaEvents.length > 0 ? state.wikipediaEvents : dailyHappenings[0].events;
+  const financeList = state.financeData;
+  const cryptoList = state.cryptoData;
   const quote = dailyQuotes[0];
   const knowledge = thingsToKnow[0];
   const isList = state.viewMode === 'list';
@@ -846,6 +848,38 @@ function renderHome(container) {
             <div class="quote-box" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
               <p class="quote-text" style="font-style: italic; font-family: 'Inter', sans-serif;">"${quote.quote}"</p>
               <p class="quote-author" style="margin-top: 10px;">— ${quote.author}</p>
+            </div>
+          </div>
+
+          <div class="daily-box" style="background: var(--card-bg); border: 1px solid var(--border-color); margin-top: 25px;">
+            <h3 style="text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; margin-bottom: 15px;">Market Watch</h3>
+            <div class="market-list">
+              ${financeList.slice(0, 4).map(item => `
+                <div class="market-item">
+                  <span class="market-symbol font-bold">${item.symbol}</span>
+                  <span class="market-price font-mono">$${item.price}</span>
+                  <span class="market-change ${parseFloat(item.change) >= 0 ? 'text-green-500' : 'text-red-500'}">
+                    ${parseFloat(item.change) >= 0 ? '+' : ''}${item.change}%
+                  </span>
+                </div>
+              `).join('')}
+              ${financeList.length === 0 ? '<p class="text-gray-500">Updating Markets...</p>' : ''}
+            </div>
+          </div>
+
+          <div class="daily-box" style="background: var(--card-bg); border: 1px solid var(--border-color); margin-top: 25px;">
+            <h3 style="text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; margin-bottom: 15px;">Crypto Tracker</h3>
+            <div class="market-list">
+              ${cryptoList.slice(0, 4).map(item => `
+                <div class="market-item">
+                  <span class="market-symbol font-bold">${item.symbol}</span>
+                  <span class="market-price font-mono">$${item.price}</span>
+                  <span class="market-change ${parseFloat(item.change) >= 0 ? 'text-green-500' : 'text-red-500'}">
+                    ${parseFloat(item.change) >= 0 ? '+' : ''}${item.change}%
+                  </span>
+                </div>
+              `).join('')}
+              ${cryptoList.length === 0 ? '<p class="text-gray-500">Updating Crypto...</p>' : ''}
             </div>
           </div>
         </div>
