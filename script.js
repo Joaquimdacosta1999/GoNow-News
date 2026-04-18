@@ -394,13 +394,15 @@ function renderPage(path) {
   const container = document.createElement('div');
   container.className = 'container fade-in';
 
-  let pageTitle = 'GoNow | Latest News';
+  let pageTitle = 'GoNow — News, Tech & Football Today';
   let pageDescription = 'GoNow — your daily dose of news, football scores, tech, and entertainment. Fast, clean, ad-light.';
+  let pageImage = 'https://images.unsplash.com/photo-1585829365234-781fcd50c45b?q=80&w=1200&h=630&auto=format&fit=crop';
+  let pageType = 'website';
 
   if (path === '/home') {
     renderHome(container);
   } else if (path === '/politics') {
-    pageTitle = 'Politics News | GoNow';
+    pageTitle = 'Politics News & Updates | GoNow';
     pageDescription = 'Stay updated with the latest conservative politics news, global analysis, and political trends on GoNow.';
     const combined = [...state.news.filter(n => n.category === 'Politics'), ...state.autoNews.filter(n => n.category === 'Politics')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Politics', combined);
@@ -410,17 +412,17 @@ function renderPage(path) {
     const combined = [...state.news.filter(n => n.category === 'Football'), ...state.autoNews.filter(n => n.category === 'Football')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Football', combined);
   } else if (path === '/entertainment') {
-    pageTitle = 'Entertainment & Trends | GoNow';
+    pageTitle = 'Entertainment News & Updates | GoNow';
     pageDescription = 'Latest entertainment news, celebrity updates, and trending stories worldwide. Pure entertainment on GoNow.';
     const combined = [...state.news.filter(n => n.category === 'Entertainment'), ...state.autoNews.filter(n => n.category === 'Entertainment')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Entertainment', combined);
   } else if (path === '/technology') {
-    pageTitle = 'Tech News & Innovation | GoNow';
+    pageTitle = 'Technology News & Updates | GoNow';
     pageDescription = 'Explore the latest in technology, tech innovations, and future gadgets. stay ahead with GoNow Tech.';
     const combined = [...state.news.filter(n => n.category === 'Technology'), ...state.autoNews.filter(n => n.category === 'Technology')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Technology', combined);
   } else if (path === '/things-to-know') {
-    pageTitle = 'Interesting Things To Know | GoNow';
+    pageTitle = 'Things To Know | GoNow';
     pageDescription = 'Expand your knowledge with interesting facts, deep dives, and things you should know today on GoNow.';
     renderCategory(container, 'Things To Know', thingsToKnow, 'knowledge');
   } else if (path === '/daily') {
@@ -444,23 +446,39 @@ function renderPage(path) {
     if (article) {
       pageTitle = `${article.title} | GoNow`;
       pageDescription = article.excerpt ? article.excerpt.substring(0, 160) : pageDescription;
+      pageImage = article.image || pageImage;
+      pageType = 'article';
       openDetail(id, 'news');
     } else {
       navigateTo('/home');
     }
   }
 
+  // Update DOM Title and Meta
   document.title = pageTitle;
-  const metaDescription = document.querySelector('meta[name="description"]');
-  if (metaDescription) {
-    metaDescription.setAttribute('content', pageDescription);
-  }
+  const currentUrl = `https://gonow247.com${path}`;
+
+  // Helper to set meta tags
+  const setMeta = (selector, attr, value) => {
+    const el = document.querySelector(selector);
+    if (el) el.setAttribute(attr, value);
+  };
+
+  setMeta('meta[name="description"]', 'content', pageDescription);
+  setMeta('link[rel="canonical"]', 'href', currentUrl);
   
-  // Also update OG and Twitter descriptions for social SEO
-  ['og:description', 'twitter:description'].forEach(prop => {
-    const meta = document.querySelector(`meta[property="${prop}"]`);
-    if (meta) meta.setAttribute('content', pageDescription);
-  });
+  // Social: OG Tags
+  setMeta('meta[property="og:title"]', 'content', pageTitle);
+  setMeta('meta[property="og:description"]', 'content', pageDescription);
+  setMeta('meta[property="og:image"]', 'content', pageImage);
+  setMeta('meta[property="og:url"]', 'content', currentUrl);
+  setMeta('meta[property="og:type"]', 'content', pageType);
+
+  // Social: Twitter Tags
+  setMeta('meta[name="twitter:title"]', 'content', pageTitle);
+  setMeta('meta[name="twitter:description"]', 'content', pageDescription);
+  setMeta('meta[name="twitter:image"]', 'content', pageImage);
+  setMeta('meta[name="twitter:url"]', 'content', currentUrl);
 
   mainContent.appendChild(container);
   // Re-attach listeners now that the content is in the DOM
