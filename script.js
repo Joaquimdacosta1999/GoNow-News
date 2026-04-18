@@ -77,17 +77,25 @@ function extractImage(item, category) {
   const combined = (item.content || '') + (item.description || '');
   
   // Look for any image link that isn't a tracking pixel
-  const allImages = combined.match(/src="([^">]+\.(?:jpg|jpeg|png|webp|gif)[^">]*)"/gi);
+  // Expanded regex for diverse source formats
+  const allImages = combined.match(/src=["']([^"'>]+\.(?:jpg|jpeg|png|webp|gif|svg)[^"'>]*)["']/gi);
   if (allImages) {
     for (const img of allImages) {
-      const src = img.match(/src="([^">]+)"/i)[1];
-      if (!src.includes('pixel') && !src.includes('analytics') && !src.includes('feedburner') && src.length > 20) {
-        return src;
+      const srcMatch = img.match(/src=["']([^"'>]+)["']/i);
+      if (srcMatch && srcMatch[1]) {
+        const src = srcMatch[1];
+        if (!src.includes('pixel') && !src.includes('analytics') && !src.includes('doubleclick') && !src.includes('feedburner') && src.length > 20) {
+          return src;
+        }
       }
     }
   }
 
-  // 3. Fallback to category default
+  // 3. Standalone URL check
+  const standaloneUrlMatch = combined.match(/https?:\/\/[^"'\s<>]+?\.(?:jpg|jpeg|png|webp|gif)/i);
+  if (standaloneUrlMatch) return standaloneUrlMatch[0];
+
+  // 4. Fallback to category default
   return getDefaultImage(category);
 }
 
