@@ -776,35 +776,35 @@ function renderPage(path) {
   if (path === '/home') {
     renderHome(container);
   } else if (path === '/politics') {
-    pageTitle = 'Politics News Today: Breaking Global Updates | GoNow';
-    pageDescription = 'Stay informed with the latest global politics news, in-depth analysis, and trending reports on GoNow. Your clean portal for political truth.';
+    pageTitle = 'Global Politics News: Breaking Updates | GoNow';
+    pageDescription = 'Stay informed with the latest global politics news, in-depth analysis, and trending reports on GoNow Intelligence.';
     pageImage = getDefaultImage('Politics');
     const combined = [...state.news.filter(n => n.category === 'Politics'), ...state.autoNews.filter(n => n.category === 'Politics')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
-    renderCategory(container, 'Politics', combined);
+    renderCategory(container, 'Global Politics', combined);
   } else if (path === '/football') {
-    pageTitle = 'Football News & Scores: Live Match Updates | GoNow';
-    pageDescription = 'Get real-time football scores, match highlights, and latest transfer news from elite leagues worldwide on GoNow. Fast and ad-light.';
+    pageTitle = 'Football Central: Live Scores & Transfer News | GoNow';
+    pageDescription = 'Get real-time football scores, match highlights, and latest transfer news from elite leagues worldwide on GoNow.';
     pageImage = getDefaultImage('Football');
     const combined = [...state.news.filter(n => n.category === 'Football'), ...state.autoNews.filter(n => n.category === 'Football')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
-    renderCategory(container, 'Football', combined);
+    renderCategory(container, 'Football Central', combined);
   } else if (path === '/entertainment') {
-    pageTitle = 'Entertainment News: Celebrity, Movies & Music Trends | GoNow';
-    pageDescription = 'The latest entertainment news, celebrity gossip, and trending pop culture stories worldwide. Stay entertained with GoNow.';
+    pageTitle = 'Pop Culture & Entertainment: Celebrity & Movie Trends | GoNow';
+    pageDescription = 'The latest entertainment news, celebrity gossip, and trending pop culture stories worldwide. GoNow Entertainment.';
     pageImage = getDefaultImage('Entertainment');
     const combined = [...state.news.filter(n => n.category === 'Entertainment'), ...state.autoNews.filter(n => n.category === 'Entertainment')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
-    renderCategory(container, 'Entertainment', combined);
+    renderCategory(container, 'Pop Culture', combined);
   } else if (path === '/technology') {
-    pageTitle = 'Technology News: Innovations, Gadgets & Tech Reviews | GoNow';
-    pageDescription = 'Explore the cutting edge of technology, future gadgets, and tech innovations. Your daily dose of technology updates on GoNow.';
+    pageTitle = 'Tech Innovation: Future Gadgets & Innovations | GoNow';
+    pageDescription = 'Explore the cutting edge of technology, future gadgets, and tech innovations. GoNow Tech Innovation Desk.';
     pageImage = getDefaultImage('Technology');
     const combined = [...state.news.filter(n => n.category === 'Technology'), ...state.autoNews.filter(n => n.category === 'Technology')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
-    renderCategory(container, 'Technology', combined);
+    renderCategory(container, 'Tech Innovation', combined);
   } else if (path === '/business') {
-    pageTitle = 'Business & Finance News: Market Trends & Economy | GoNow';
-    pageDescription = 'Get the latest business news, stock market updates, and economic analysis. Stay ahead of the curve with GoNow Business.';
+    pageTitle = 'Business Journal: Market Trends & Finance | GoNow';
+    pageDescription = 'Get the latest business news, stock market updates, and economic analysis. GoNow Business Journal.';
     pageImage = getDefaultImage('Business');
     const combined = [...state.news.filter(n => n.category === 'Business'), ...state.autoNews.filter(n => n.category === 'Business')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
-    renderCategory(container, 'Business', combined);
+    renderCategory(container, 'Business Journal', combined);
   } else if (path === '/things-to-know') {
     pageTitle = 'Things To Know: Facts & Deep Dives | GoNow';
     pageDescription = 'Expand your horizons with fascinating facts and deep dives into history, science, and more on the GoNow Knowledge Desk.';
@@ -1058,7 +1058,7 @@ function renderHome(container) {
           <img src="${featured.image}" alt="${featured.title}" class="hero-img" loading="lazy">
         </div>
         <div class="hero-content">
-          <div class="meta-label">TOP STORY • ${featured.category.toUpperCase()}</div>
+          <div class="meta-label">TOP STORY • <span onclick="event.stopPropagation(); navigateTo('/${featured.category.toLowerCase()}')" style="cursor: pointer; text-decoration: underline;">${featured.category.toUpperCase()}</span></div>
           <h1 class="hero-title">${featured.title}</h1>
           <p class="hero-description">${featured.excerpt}</p>
           <div class="hero-footer">
@@ -1171,31 +1171,47 @@ function renderCategory(container, title, items, type = 'news') {
   const urlParams = new URLSearchParams(window.location.search);
   const page = parseInt(urlParams.get('page')) || 1;
   const pageSize = 12;
+  const totalPages = Math.ceil(items.length / pageSize);
   
+  const intros = {
+    'Global Politics': 'Comprehensive coverage of international relations, diplomatic shifts, and breaking political intelligence from global capitals.',
+    'Business Journal': 'Market leading insights, economic analysis, and corporate reporting designed for the modern decision maker.',
+    'Football Central': 'Real-time scores, transfer exclusives, and in-depth match analysis from the world\'s premiere football leagues.',
+    'Tech Innovation': 'Tracking the cutting edge of technological advancement, from AI breakthroughs to future gadgetry.',
+    'Pop Culture': 'Your essential guide to global entertainment, celebrity narratives, and the trends shaping modern culture.',
+    'Knowledge Desk': 'A repository of deep-dive intelligence, historical milestones, and fascinating factual narratives.'
+  };
+
   const isFollowed = state.userProfile?.followedCategories?.includes(title);
   const followBtn = state.user ? `
-    <button onclick="toggleFollow('${title}')" class="submit-btn" style="padding: 6px 16px; font-size: 0.8rem; background: ${isFollowed ? 'var(--accent-color)' : 'var(--primary-color)'}; color: ${isFollowed ? 'var(--text-color)' : 'white'}; border: 1px solid var(--border-color);">
-      ${isFollowed ? 'Following' : 'Follow Topic'}
+    <button onclick="toggleFollow('${title}')" class="submit-btn" style="padding: 10px 20px; font-size: 0.9rem; background: ${isFollowed ? 'var(--accent-color)' : 'var(--primary-color)'}; color: ${isFollowed ? 'var(--text-color)' : 'white'}; border: 1px solid var(--border-color); border-radius: 12px; font-weight: 700;">
+      ${isFollowed ? 'Following Topic' : 'Follow Intelligence'}
     </button>
   ` : '';
 
   const pagedItems = items.slice((page - 1) * pageSize, page * pageSize);
   
   container.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-      <div style="display: flex; align-items: center; gap: 20px;">
-        <h1 class="section-title" style="margin-bottom: 0;">${title}</h1>
-        ${followBtn}
-      </div>
-      <div class="view-toggle">
-        <button class="toggle-btn ${!isList ? 'active' : ''}" onclick="toggleViewMode('grid')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-          Grid
-        </button>
-        <button class="toggle-btn ${isList ? 'active' : ''}" onclick="toggleViewMode('list')">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>
-          List
-        </button>
+    <div style="margin-bottom: 40px; padding-bottom: 30px; border-bottom: 1px solid var(--border-color);">
+      <div style="display: flex; flex-direction: column; gap: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;">
+          <div>
+            <h1 class="section-title" style="margin-bottom: 10px; font-size: 2.5rem; letter-spacing: -1px;">${title}</h1>
+            <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 700px; line-height: 1.6;">${intros[title] || 'The latest high-authority reporting and global insights curated by our desks.'}</p>
+          </div>
+          ${followBtn}
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+          <div style="display: flex; gap: 8px;">
+            <span class="badge" style="background: var(--accent-color); color: var(--primary-color);">${items.length} Reports</span>
+            <span class="badge" style="background: var(--card-bg); border: 1px solid var(--border-color);">${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} Edition</span>
+          </div>
+          <div class="view-toggle">
+            <button class="toggle-btn ${!isList ? 'active' : ''}" onclick="toggleViewMode('grid')">Grid</button>
+            <button class="toggle-btn ${isList ? 'active' : ''}" onclick="toggleViewMode('list')">List</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="news-grid ${isList ? 'list-view' : ''}">
@@ -1414,6 +1430,7 @@ function renderAdmin(container) {
                   <label style="display: block; margin-bottom: 5px; font-weight: 600;">Category</label>
                   <select id="news-category" class="comment-input" required>
                     <option value="Politics">Politics</option>
+                    <option value="Business">Business</option>
                     <option value="Football">Football</option>
                     <option value="Entertainment">Entertainment</option>
                     <option value="Technology">Technology</option>
@@ -1669,30 +1686,30 @@ function createAdUnit(slot, format = 'auto') {
 function createNewsCard(item) {
   const isSaved = state.savedItems.some(s => s.id === item.id);
   const authorName = item.author || (item.isAuto ? `GoNow ${item.category} Desk` : 'GoNow Team');
+  const catPath = `/${item.category.toLowerCase()}`;
+
   return `
-    <article class="card" data-id="${item.id}" data-type="news">
-      <a href="/article/${item.id}" class="card-link-wrapper" style="text-decoration: none; color: inherit; display: block; height: 100%;">
-        <div class="card-img-wrapper">
-          <img src="${item.image}" alt="${item.title}" class="card-img" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${getDefaultImage(item.category)}'">
+    <article class="card" data-id="${item.id}" data-type="news" onclick="navigateTo('/article/${item.id}')" style="cursor: pointer;">
+      <div class="card-img-wrapper">
+        <img src="${item.image}" alt="${item.title}" class="card-img" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${getDefaultImage(item.category)}'">
+      </div>
+      <div class="card-content">
+        <div class="card-meta">
+          <span class="meta-label" onclick="event.stopPropagation(); navigateTo('${catPath}')" style="font-size: 0.65rem; margin-bottom: 5px; cursor: pointer; text-decoration: underline;">${item.category.toUpperCase()}</span>
+          ${item.isAuto ? '<span style="font-size: 0.65rem; color: #ff3e3e; font-weight: 800; letter-spacing: 1px;">• LIVE</span>' : ''}
         </div>
-        <div class="card-content">
-          <div class="card-meta">
-            <span class="meta-label" style="font-size: 0.65rem; margin-bottom: 5px;">${item.category.toUpperCase()}</span>
-            ${item.isAuto ? '<span style="font-size: 0.65rem; color: #ff3e3e; font-weight: 800; letter-spacing: 1px;">• LIVE</span>' : ''}
+        <h3 class="card-title">${item.title}</h3>
+        <p class="card-excerpt">${item.excerpt}</p>
+        <div class="card-footer" style="margin-top: auto; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color);">
+          <div style="display: flex; flex-direction: column;">
+            <span style="font-weight: 700; font-size: 0.8rem; cursor: pointer;" onclick="event.stopPropagation(); navigateTo('/author/${encodeURIComponent(authorName)}')">By ${authorName}</span>
+            <span style="font-size: 0.7rem; color: var(--text-muted);">${item.readTime}</span>
           </div>
-          <h3 class="card-title">${item.title}</h3>
-          <p class="card-excerpt">${item.excerpt}</p>
-          <div class="card-footer" style="margin-top: auto; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color);">
-            <div style="display: flex; flex-direction: column;">
-              <span style="font-weight: 700; font-size: 0.8rem;">By ${authorName}</span>
-              <span style="font-size: 0.7rem; color: var(--text-muted);">${item.readTime}</span>
-            </div>
-            <button class="save-btn ${isSaved ? 'text-primary' : ''}" onclick="event.preventDefault(); event.stopPropagation(); toggleSave('${item.id}', 'news')">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-            </button>
-          </div>
+          <button class="save-btn ${isSaved ? 'text-primary' : ''}" onclick="event.stopPropagation(); toggleSave('${item.id}', 'news')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+          </button>
         </div>
-      </a>
+      </div>
     </article>
   `;
 }
