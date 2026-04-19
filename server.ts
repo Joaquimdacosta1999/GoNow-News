@@ -83,7 +83,12 @@ async function startServer() {
 </rss>`);
   });
 
-  // 2. SEO & META INJECTION MIDDLEWARE (MUST BE BEFORE STATIC)
+  // Redirect root to /home
+  app.get('/', (req, res) => {
+    res.redirect('/home');
+  });
+
+  // 2. SEO & META INJECTION MIDDLEWARE
   app.get('*', async (req, res, next) => {
     // Skip API, RSS, Sitemap, Robots, Ads, and assets with extensions
     if (req.url.startsWith('/api') || req.url === '/rss' || req.url === '/sitemap.xml' || req.url === '/robots.txt' || req.url === '/ads.txt' || req.url.includes('.')) {
