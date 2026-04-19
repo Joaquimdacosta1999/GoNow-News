@@ -61,7 +61,7 @@ const state = {
 let freshNotifs = 0;
 
 // Valid routes
-const pathRoutes = ['/home', '/politics', '/business', '/football', '/entertainment', '/technology', '/author'];
+const pathRoutes = ['/home', '/politics', '/business', '/football', '/entertainment', '/technology', '/author', '/contribute'];
 
 // DOM Elements
 const body = document.body;
@@ -821,6 +821,10 @@ function renderPage(path) {
     pageTitle = 'About GoNow: Our News Mission & Vision | GoNow';
     pageDescription = 'Discover how GoNow is redefining news consumption with a fast, clean, and ad-light interface dedicated to the truth.';
     renderAbout(container);
+  } else if (path === '/contribute') {
+    pageTitle = 'Support GoNow Intelligence: Reader Revenue | GoNow';
+    pageDescription = 'Help support independent, verified journalism. Your contributions help GoNow maintain high-authority reporting and ad-light experiences.';
+    renderContribute(container);
   } else if (path.startsWith('/author/')) {
     const authorName = decodeURIComponent(path.split('/')[2]);
     pageTitle = `${authorName} | GoNow News Author`;
@@ -1635,6 +1639,56 @@ function renderAbout(container) {
   `;
 }
 
+function renderContribute(container) {
+  container.innerHTML = `
+    <div style="max-width: 800px; margin: 60px auto; line-height: 1.8;">
+      <h1 style="font-size: 3.5rem; font-weight: 800; margin-bottom: 24px; letter-spacing: -2px;">Support Independent Intelligence</h1>
+      <p style="font-size: 1.4rem; margin-bottom: 40px; color: var(--text-muted); font-weight: 400;">
+        GoNow is powered by readers like you. Your contributions directly fund our <strong style="color: var(--text-color);">verified news feeds</strong>, expert research, and high-performance infrastructure.
+      </p>
+      
+      <div style="background: var(--accent-color); padding: 40px; border-radius: 24px; border: 1px solid var(--border-color); text-align: center; margin-bottom: 60px;">
+        <h2 style="font-size: 1.8rem; margin-bottom: 15px;">Contribute via Google</h2>
+        <p style="margin-bottom: 30px; color: var(--text-muted);">We utilize Google Reader Revenue Manager for secure, one-tap support. Choose your contribution level below to help us stay independent.</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 15px; max-width: 400px; margin: 0 auto;">
+          <button onclick="triggerContribution('SUPPORT')" class="btn" style="background: var(--primary-color); color: white; padding: 18px; border-radius: 12px; font-weight: 700; font-size: 1.1rem; border: none; cursor: pointer; transition: transform 0.2s;">
+            Support GoNow Intelligence
+          </button>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">Secure payment processed via your Google Account.</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px;">
+        <div>
+          <h3 style="font-size: 1.2rem; margin-bottom: 15px; color: var(--primary-color);">Why Support Us?</h3>
+          <p>By contributing, you ensure GoNow remains free of intrusive trackers and heavy advertising. Your revenue is used for high-authority licensing and advanced data analysis.</p>
+        </div>
+        <div>
+          <h3 style="font-size: 1.2rem; margin-bottom: 15px; color: var(--primary-color);">One-Tap Simplicity</h3>
+          <p>Managed directly through your Google Account, you can start, stop, or adjust your support instantly via the Google News ecosystem.</p>
+        </div>
+      </div>
+      
+      <p style="text-align: center; font-size: 0.9rem; color: var(--text-muted); margin-top: 60px;">
+        GoNow Intelligence is a verified partner of the <strong style="color: var(--text-color);">Google Publisher Center</strong>.
+      </p>
+    </div>
+  `;
+}
+
+// Function to interface with Google SwG
+window.triggerContribution = (type) => {
+  if (window.subscriptions) {
+    // If SwG is loaded, trigger the contribution overlay
+    window.subscriptions.showContributionOptions();
+  } else {
+    // Fallback or alert if SwG hasn't initialized
+    alert("GoNow Intelligence Support is initializing. Please ensure you are logged into your Google Account.");
+    console.log("RRM Triggered:", type);
+  }
+};
+
 function renderAuthor(container, authorName) {
   const articles = [...state.news, ...state.autoNews].filter(n => 
     (n.author === authorName) || 
@@ -1832,6 +1886,16 @@ function renderModalContent(item, type, isSaved, initialComments) {
     <div class="detail-body markdown-content">
       ${sanitizedHtml}
     </div>
+    
+    <!-- Reader Revenue Manager CTA -->
+    <div style="margin: 40px 0; padding: 30px; background: var(--accent-color); border-radius: 16px; border: 1px solid var(--border-color); text-align: center;">
+      <h3 style="margin-bottom: 10px;">Support GoNow Intelligence</h3>
+      <p style="margin-bottom: 20px; color: var(--text-muted); font-size: 0.95rem;">If you value our high-authority reporting, consider supporting our mission with a one-time or recurring contribution.</p>
+      <button onclick="triggerContribution('ARTICLE_CTA')" class="submit-btn" style="padding: 12px 24px; font-size: 1rem;">
+        Support with Google
+      </button>
+    </div>
+
     ${item.source ? `<p style="margin-top: 30px; font-size: 0.9rem; color: var(--text-muted);">Source: <a href="${item.source}" target="_blank" rel="noopener noreferrer" style="color: var(--primary-color); word-break: break-all;">${item.source}</a></p>` : ''}
     <div class="card-footer mt-4" style="border: none; padding-top: 0;">
       <div style="display: flex; gap: 15px;">
