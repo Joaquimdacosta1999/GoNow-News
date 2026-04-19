@@ -83,7 +83,92 @@ async function startServer() {
 </rss>`);
   });
 
-  // 2. Vite / Static setup
+  // 2. SEO & META INJECTION MIDDLEWARE (MUST BE BEFORE STATIC)
+  app.get('*', async (req, res, next) => {
+    // Skip API, RSS, Sitemap, Robots, Ads, and assets with extensions
+    if (req.url.startsWith('/api') || req.url === '/rss' || req.url === '/sitemap.xml' || req.url === '/robots.txt' || req.url === '/ads.txt' || req.url.includes('.')) {
+      return next();
+    }
+    
+    try {
+      const isProd = process.env.NODE_ENV === 'production';
+      const templatePath = isProd ? path.join(process.cwd(), 'dist', 'index.html') : path.join(process.cwd(), 'index.html');
+      
+      // Check if file exists to prevent crash
+      if (!fs.existsSync(templatePath)) {
+        return next();
+      }
+
+      let html = fs.readFileSync(templatePath, 'utf8');
+      
+      // Determine Meta Tags based on path
+      const pathUrl = req.path;
+      let title = 'GoNow | Latest News, Tech & Football';
+      let description = 'GoNow — your daily dose of news, football scores, tech, and entertainment. Fast, clean, ad-light.';
+      let image = 'https://images.unsplash.com/photo-1585829365234-781fcd50c45b?q=80&w=1200&h=630&auto=format&fit=crop';
+
+      if (pathUrl === '/politics') {
+        title = 'Global Politics News: Breaking Updates | GoNow';
+        description = 'Stay informed with the latest global politics news, in-depth analysis, and trending reports on GoNow Intelligence.';
+      } else if (pathUrl === '/football') {
+        title = 'Football Central: Live Scores & Transfer News | GoNow';
+        description = 'Get real-time football scores, match highlights, and latest transfer news from elite leagues worldwide on GoNow.';
+      } else if (pathUrl === '/entertainment') {
+        title = 'Pop Culture & Entertainment: Celebrity & Movie Trends | GoNow';
+        description = 'The latest entertainment news, celebrity gossip, and trending pop culture stories worldwide. GoNow Entertainment.';
+      } else if (pathUrl === '/technology') {
+        title = 'Tech Innovation: Future Gadgets & Innovations | GoNow';
+        description = 'Explore the cutting edge of technology, future gadgets, and tech innovations. GoNow Tech Innovation Desk.';
+      } else if (pathUrl === '/business') {
+        title = 'Business Journal: Market Trends & Finance | GoNow';
+        description = 'Get the latest business news, stock market updates, and economic analysis. GoNow Business Journal.';
+      } else if (pathUrl === '/things-to-know') {
+        title = 'Things To Know: Facts & Deep Dives | GoNow';
+        description = 'Expand your horizons with fascinating facts and deep dives into history, science, and more on the GoNow Knowledge Desk.';
+      } else if (pathUrl === '/about') {
+        title = 'About GoNow: Our News Mission & Vision | GoNow';
+        description = 'Discover how GoNow is redefining news consumption with a fast, clean, and ad-light interface dedicated to the truth.';
+      } else if (pathUrl === '/contribute') {
+        title = 'Support GoNow Intelligence: Reader Revenue | GoNow';
+        description = 'Help support independent, verified journalism. Your contributions help GoNow maintain high-authority reporting and ad-light experiences.';
+      } else if (pathUrl === '/privacy') {
+        title = 'Privacy Trust & Data Ethics | GoNow Intelligence';
+        description = 'Learn about our commitment to user privacy, data security, and transparent journalism standards.';
+      } else if (pathUrl === '/terms') {
+        title = 'Terms of Service & Full Disclosure | GoNow';
+        description = 'Understanding the terms of use for GoNow news portal and our content attribution standards.';
+      } else if (pathUrl.startsWith('/article/')) {
+        const id = pathUrl.split('/')[2];
+        title = `Special Report: ${id.toUpperCase()} | GoNow Intelligence`;
+        description = 'Read the full report and in-depth analysis on GoNow News.';
+      }
+
+      // Inject into HTML with more robust replacement (case-insensitive and tolerant of minification)
+      html = html.replace(/<title>.*?<\/title>/i, `<title>${title}</title>`);
+      html = html.replace(/<meta\s+name="description"\s+content=".*?"\/?>/i, `<meta name="description" content="${description}">`);
+      
+      // Social/OG Injection
+      html = html.replace(/property="og:title"\s+content=".*?"/gi, `property="og:title" content="${title}"`);
+      html = html.replace(/property="og:description"\s+content=".*?"/gi, `property="og:description" content="${description}"`);
+      html = html.replace(/property="og:image"\s+content=".*?"/gi, `property="og:image" content="${image}"`);
+      html = html.replace(/property="og:url"\s+content=".*?"/gi, `property="og:url" content="https://gonow247.com${pathUrl}"`);
+
+      // Twitter Injection
+      html = html.replace(/name="twitter:title"\s+content=".*?"/gi, `name="twitter:title" content="${title}"`);
+      html = html.replace(/name="twitter:description"\s+content=".*?"/gi, `name="twitter:description" content="${description}"`);
+      html = html.replace(/name="twitter:image"\s+content=".*?"/gi, `name="twitter:image" content="${image}"`);
+
+      // Canonical
+      html = html.replace(/link\s+rel="canonical"\s+href=".*?"/gi, `<link rel="canonical" href="https://gonow247.com${pathUrl}">`);
+      
+      return res.send(html);
+    } catch (e) {
+      console.error('Meta injection error:', e);
+      return next();
+    }
+  });
+
+  // 3. Static setup
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -95,69 +180,6 @@ async function startServer() {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
   }
-
-  // SEO-friendly Route Handler (Server-Side Meta Injection)
-  app.get('*', async (req, res, next) => {
-    // Skip API, RSS, Sitemap, Robots, and assets with extensions
-    if (req.url.startsWith('/api') || req.url === '/rss' || req.url === '/sitemap.xml' || req.url === '/robots.txt' || req.url.includes('.')) return next();
-    
-    try {
-      const isProd = process.env.NODE_ENV === 'production';
-      const templatePath = isProd ? path.join(process.cwd(), 'dist', 'index.html') : path.join(process.cwd(), 'index.html');
-      
-      let html = fs.readFileSync(templatePath, 'utf8');
-      
-      // Determine Meta Tags based on path
-      const path = req.path;
-      let title = 'GoNow | Latest News, Tech & Football';
-      let description = 'GoNow — your daily dose of news, football scores, tech, and entertainment. Fast, clean, ad-light.';
-      let image = 'https://images.unsplash.com/photo-1585829365234-781fcd50c45b?q=80&w=1200&h=630&auto=format&fit=crop';
-
-      if (path === '/politics') {
-        title = 'Global Politics News: Breaking Updates | GoNow';
-        description = 'Stay informed with the latest global politics news, in-depth analysis, and trending reports on GoNow Intelligence.';
-      } else if (path === '/football') {
-        title = 'Football Central: Live Scores & Transfer News | GoNow';
-        description = 'Get real-time football scores, match highlights, and latest transfer news from elite leagues worldwide on GoNow.';
-      } else if (path === '/entertainment') {
-        title = 'Pop Culture & Entertainment: Celebrity & Movie Trends | GoNow';
-        description = 'The latest entertainment news, celebrity gossip, and trending pop culture stories worldwide. GoNow Entertainment.';
-      } else if (path === '/technology') {
-        title = 'Tech Innovation: Future Gadgets & Innovations | GoNow';
-        description = 'Explore the cutting edge of technology, future gadgets, and tech innovations. GoNow Tech Innovation Desk.';
-      } else if (path === '/business') {
-        title = 'Business Journal: Market Trends & Finance | GoNow';
-        description = 'Get the latest business news, stock market updates, and economic analysis. GoNow Business Journal.';
-      } else if (path === '/things-to-know') {
-        title = 'Things To Know: Facts & Deep Dives | GoNow';
-        description = 'Expand your horizons with fascinating facts and deep dives into history, science, and more on the GoNow Knowledge Desk.';
-      } else if (path === '/contribute') {
-        title = 'Support GoNow Intelligence: Reader Revenue | GoNow';
-        description = 'Help support independent, verified journalism. Your contributions help GoNow maintain high-authority reporting and ad-light experiences.';
-      } else if (path.startsWith('/article/')) {
-        const id = path.split('/')[2];
-        // Note: For full SEO, you'd fetch from Firestore here. 
-        // For now, using static titles to ensure Google indexes SOMETHING unique.
-        title = `Special Report: ${id.toUpperCase()} | GoNow Intelligence`;
-        description = 'Read the full report and in-depth analysis on GoNow News.';
-      }
-
-      // Inject into HTML
-      html = html.replace(/<title>.*?<\/title>/, `<title>${title}</title>`);
-      html = html.replace(/<meta name="description" content=".*?"/, `<meta name="description" content="${description}"`);
-      
-      // Open Graph / Social inject
-      html = html.replace(/property="og:title" content=".*?"/, `property="og:title" content="${title}"`);
-      html = html.replace(/property="og:description" content=".*?"/, `property="og:description" content="${description}"`);
-      html = html.replace(/property="og:image" content=".*?"/, `property="og:image" content="${image}"`);
-      
-      res.send(html);
-    } catch (e) {
-      console.error('Meta injection error:', e);
-      // Fallback to static serving
-      next();
-    }
-  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`GoNow App Server running at http://0.0.0.0:${PORT}`);

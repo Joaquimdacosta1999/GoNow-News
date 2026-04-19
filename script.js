@@ -764,6 +764,7 @@ function handleRoute() {
 }
 
 function renderPage(path) {
+  console.log('Rendering Page Path:', path);
   mainContent.innerHTML = '';
   const container = document.createElement('div');
   container.className = 'container fade-in';
