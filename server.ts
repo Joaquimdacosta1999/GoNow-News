@@ -26,7 +26,7 @@ async function startServer() {
   // Dynamic Sitemap Generation
   app.get('/sitemap.xml', (req, res) => {
     const baseUrl = 'https://gonow247.com';
-    const categories = ['home', 'politics', 'business', 'football', 'entertainment', 'technology', 'things-to-know', 'about', 'contribute'];
+    const categories = ['home', 'politics', 'business', 'football', 'entertainment', 'technology', 'about', 'contribute'];
     
     // We'll import data.js dynamically or just use the IDs we know
     // Since we're in server.ts (Node), we can try to require it if it was CJS, but it's ESM.
@@ -127,9 +127,6 @@ async function startServer() {
       } else if (pathUrl === '/business') {
         title = 'Business Journal: Market Trends & Finance | GoNow';
         description = 'Get the latest business news, stock market updates, and economic analysis. GoNow Business Journal.';
-      } else if (pathUrl === '/things-to-know') {
-        title = 'Things To Know: Facts & Deep Dives | GoNow';
-        description = 'Expand your horizons with fascinating facts and deep dives into history, science, and more on the GoNow Knowledge Desk.';
       } else if (pathUrl === '/about') {
         title = 'About GoNow: Our News Mission & Vision | GoNow';
         description = 'Discover how GoNow is redefining news consumption with a fast, clean, and ad-light interface dedicated to the truth.';

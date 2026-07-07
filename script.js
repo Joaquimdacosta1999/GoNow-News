@@ -806,10 +806,6 @@ function renderPage(path) {
     pageImage = getDefaultImage('Business');
     const combined = [...state.news.filter(n => n.category === 'Business'), ...state.autoNews.filter(n => n.category === 'Business')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Business Journal', combined);
-  } else if (path === '/things-to-know') {
-    pageTitle = 'Things To Know: Facts & Deep Dives | GoNow';
-    pageDescription = 'Expand your horizons with fascinating facts and deep dives into history, science, and more on the GoNow Knowledge Desk.';
-    renderCategory(container, 'Things To Know', thingsToKnow, 'knowledge');
   } else if (path === '/daily') {
     pageTitle = 'Daily Digest: Today\'s Top Stories & History | GoNow';
     pageDescription = 'A curated daily digest of critical world news, important historical milestones, and inspiring quotes to start your morning right.';
@@ -1113,13 +1109,6 @@ function renderHome(container) {
         </div>
 
         <div class="sidebar-section">
-          <div class="knowledge-box" style="background: #1a1a1a; color: white; padding: 25px; border-radius: var(--radius); margin-bottom: 25px; border: 1px solid #333;">
-             <div class="meta-label" style="color: #8b5cf6; margin-bottom: 10px;">Daily Insight</div>
-             <h4 style="margin-bottom: 12px; font-size: 1.25rem; font-family: 'Inter', sans-serif; font-weight: 700;">${knowledge.title}</h4>
-             <p style="font-size: 0.95rem; opacity: 0.8; line-height: 1.6; margin-bottom: 20px;">${knowledge.tip}</p>
-             <a href="/things-to-know" class="btn" style="width: 100%; border: 1px solid #444; text-align: center; display: block; color: white;">Expand Knowledge</a>
-          </div>
-
           <div class="daily-box" style="background: var(--card-bg); border: 1px solid var(--border-color);">
             <h3 style="text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; margin-bottom: 15px;">Historical Context</h3>
             <ul class="daily-list">
@@ -1306,9 +1295,6 @@ function renderDaily(container) {
             <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 15px; text-align: center;">Powered by CoinGecko</p>
           </div>
         </section>
-
-        <h2 class="section-title">Knowledge of the Day</h2>
-        ${createKnowledgeCard(knowledge)}
 
         <h2 class="section-title" style="margin-top: 30px;">Daily Quote</h2>
         <div class="daily-box" style="text-align: center; padding: 40px;">
@@ -2054,8 +2040,7 @@ function handleSearch(e) {
   // Aggregate all possible search items
   const allItems = [
     ...state.news.map(item => ({ ...item, type: 'news' })),
-    ...state.autoNews.map(item => ({ ...item, type: 'news' })),
-    ...thingsToKnow.map((item, idx) => ({ ...item, id: `kt-${idx}`, type: 'knowledge', category: 'Knowledge' }))
+    ...state.autoNews.map(item => ({ ...item, type: 'news' }))
   ];
 
   const results = allItems.filter(item => 
@@ -2081,10 +2066,8 @@ function handleSearch(e) {
       <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px;">Found ${results.length} relevant results</p>
       <div style="display: flex; flex-direction: column; gap: 10px;">
         ${results.map(item => {
-          const path = item.type === 'news' ? `/article/${item.id}` : '/things-to-know';
-          const icon = item.type === 'news' ? 
-            `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>` : 
-            `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg>`;
+          const path = `/article/${item.id}`;
+          const icon = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>`;
           
           return `
             <div class="trending-item" style="padding: 20px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: flex-start; gap: 20px; transition: var(--transition);" 
