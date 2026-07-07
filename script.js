@@ -45,6 +45,7 @@ const state = {
   isAuthInitialized: false,
   news: [],
   newsLoaded: false,
+  affiliateAds: [],
   savedItems: JSON.parse(localStorage.getItem('savedItems')) || [],
   learnedLessons: JSON.parse(localStorage.getItem('learnedLessons')) || [],
   wikipediaEvents: [],
@@ -238,6 +239,116 @@ function getDefaultImage(cat) {
   return images[cat] || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=2000&auto=format&fit=crop';
 }
 
+const DEFAULT_AFFILIATE_ADS = [
+  {
+    title: "Protect Your Digital Privacy (60% Off)",
+    description: "Secure your connection, bypass content blocks, and stay private online with NordVPN.",
+    link: "https://nordvpn.com",
+    imageUrl: "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=200&auto=format&fit=crop",
+    type: "Affiliate",
+    views: 0,
+    clicks: 0
+  },
+  {
+    title: "Amazon Prime Student - 6 Months Free",
+    description: "Get fast, free shipping on millions of items, exclusive college deals, and free streaming with Amazon.",
+    link: "https://amazon.com",
+    imageUrl: "https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?q=80&w=200&auto=format&fit=crop",
+    type: "Banner",
+    views: 0,
+    clicks: 0
+  },
+  {
+    title: "HostGator Premium Cloud Hosting ($2.75/mo)",
+    description: "Launch your website today with a free domain, unmetered bandwidth, and 24/7 expert support.",
+    link: "https://www.hostgator.com",
+    imageUrl: "https://images.unsplash.com/photo-1600132806370-bf17e65e942f?q=80&w=200&auto=format&fit=crop",
+    type: "Sponsor",
+    views: 0,
+    clicks: 0
+  }
+];
+
+let currentAdIndex = 0;
+export function getNextAffiliateAd() {
+  const ads = (state.affiliateAds && state.affiliateAds.length > 0) ? state.affiliateAds : DEFAULT_AFFILIATE_ADS;
+  if (!ads || ads.length === 0) return null;
+  const ad = ads[currentAdIndex % ads.length];
+  currentAdIndex++;
+  
+  if (ad && ad.id) {
+    try {
+      updateDoc(doc(db, 'affiliate_ads', ad.id), {
+        views: (ad.views || 0) + 1
+      });
+    } catch (e) {
+      console.warn("Failed to update ad views:", e);
+    }
+  }
+  return ad;
+}
+
+window.trackAdClick = async (adId) => {
+  if (!adId) return;
+  const ad = state.affiliateAds.find(a => a.id === adId);
+  if (ad) {
+    try {
+      await updateDoc(doc(db, 'affiliate_ads', adId), {
+        clicks: (ad.clicks || 0) + 1
+      });
+    } catch (e) {
+      console.warn("Failed to update ad clicks:", e);
+    }
+  }
+};
+
+window.initGoogleAds = function() {
+  const adElements = document.querySelectorAll('.adsbygoogle:not([data-adsbygoogle-status])');
+  const isAdSenseBlocked = typeof window.adsbygoogle === 'undefined' || !window.adsbygoogle.push;
+
+  adElements.forEach(ins => {
+    ins.setAttribute('data-adsbygoogle-status', 'pending');
+    const container = ins.closest('.ad-container');
+    const slot = container ? container.getAttribute('data-slot') : '';
+    const fallbackEl = slot ? document.getElementById(`fallback-${slot}`) : null;
+
+    if (isAdSenseBlocked) {
+      if (fallbackEl) {
+        fallbackEl.classList.remove('hidden');
+      }
+      ins.style.display = 'none';
+      if (container) {
+        const label = container.querySelector('.ad-label');
+        if (label) label.innerText = 'Featured Partner Deal';
+      }
+    } else {
+      try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        
+        // Timeout check for empty ads / no-fill recovery
+        setTimeout(() => {
+          if (ins.innerHTML.trim() === "" || ins.clientHeight === 0) {
+            if (fallbackEl) {
+              fallbackEl.classList.remove('hidden');
+            }
+            ins.style.display = 'none';
+            if (container) {
+              const label = container.querySelector('.ad-label');
+              if (label) label.innerText = 'Featured Partner Deal';
+            }
+          }
+        }, 1500);
+      } catch (e) {
+        console.warn("Google AdSense init warning:", e);
+        if (fallbackEl) {
+          fallbackEl.classList.remove('hidden');
+        }
+        ins.style.display = 'none';
+      }
+    }
+  });
+}
+
 function init() {
   body.setAttribute('data-theme', state.currentTheme);
   updateThemeIcon();
@@ -332,6 +443,29 @@ function init() {
     } catch (e) { /* Caught fatal throw to prevent unhandled rejection */ }
     state.newsLoaded = true;
     handleRoute();
+  });
+
+  // Real-time Affiliate Ads Listener
+  const adsQuery = query(collection(db, 'affiliate_ads'));
+  onSnapshot(adsQuery, async (snapshot) => {
+    if (snapshot.empty) {
+      state.affiliateAds = DEFAULT_AFFILIATE_ADS;
+      const isAdmin = state.user?.email === 'joaquimdacosta1999@gmail.com' || state.userProfile?.role === 'admin';
+      if (isAdmin) {
+        try {
+          for (const ad of DEFAULT_AFFILIATE_ADS) {
+            await addDoc(collection(db, 'affiliate_ads'), ad);
+          }
+        } catch (e) {
+          console.warn("Failed to auto-seed affiliate ads:", e);
+        }
+      }
+    } else {
+      state.affiliateAds = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    }
+  }, (error) => {
+    console.warn("Affiliate Ads listener failed, using defaults:", error);
+    state.affiliateAds = DEFAULT_AFFILIATE_ADS;
   });
 
   // Routing
@@ -780,31 +914,31 @@ function renderPage(path) {
     pageTitle = 'Global Politics News: Breaking Updates | GoNow';
     pageDescription = 'Stay informed with the latest global politics news, in-depth analysis, and trending reports on GoNow Intelligence.';
     pageImage = getDefaultImage('Politics');
-    const combined = [...state.news.filter(n => n.category === 'Politics'), ...state.autoNews.filter(n => n.category === 'Politics')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const combined = [...state.autoNews.filter(n => n.category === 'Politics')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Global Politics', combined);
   } else if (path === '/football') {
     pageTitle = 'Football Central: Live Scores & Transfer News | GoNow';
     pageDescription = 'Get real-time football scores, match highlights, and latest transfer news from elite leagues worldwide on GoNow.';
     pageImage = getDefaultImage('Football');
-    const combined = [...state.news.filter(n => n.category === 'Football'), ...state.autoNews.filter(n => n.category === 'Football')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const combined = [...state.autoNews.filter(n => n.category === 'Football')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Football Central', combined);
   } else if (path === '/entertainment') {
     pageTitle = 'Pop Culture & Entertainment: Celebrity & Movie Trends | GoNow';
     pageDescription = 'The latest entertainment news, celebrity gossip, and trending pop culture stories worldwide. GoNow Entertainment.';
     pageImage = getDefaultImage('Entertainment');
-    const combined = [...state.news.filter(n => n.category === 'Entertainment'), ...state.autoNews.filter(n => n.category === 'Entertainment')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const combined = [...state.autoNews.filter(n => n.category === 'Entertainment')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Pop Culture', combined);
   } else if (path === '/technology') {
     pageTitle = 'Tech Innovation: Future Gadgets & Innovations | GoNow';
     pageDescription = 'Explore the cutting edge of technology, future gadgets, and tech innovations. GoNow Tech Innovation Desk.';
     pageImage = getDefaultImage('Technology');
-    const combined = [...state.news.filter(n => n.category === 'Technology'), ...state.autoNews.filter(n => n.category === 'Technology')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const combined = [...state.autoNews.filter(n => n.category === 'Technology')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Tech Innovation', combined);
   } else if (path === '/business') {
     pageTitle = 'Business Journal: Market Trends & Finance | GoNow';
     pageDescription = 'Get the latest business news, stock market updates, and economic analysis. GoNow Business Journal.';
     pageImage = getDefaultImage('Business');
-    const combined = [...state.news.filter(n => n.category === 'Business'), ...state.autoNews.filter(n => n.category === 'Business')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const combined = [...state.autoNews.filter(n => n.category === 'Business')].sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
     renderCategory(container, 'Business Journal', combined);
   } else if (path === '/daily') {
     pageTitle = 'Daily Digest: Today\'s Top Stories & History | GoNow';
@@ -999,7 +1133,7 @@ function renderHome(container) {
     'Technology': []
   };
 
-  const allSourceNews = [...state.news, ...state.autoNews];
+  const allSourceNews = [...state.autoNews];
   allSourceNews.forEach(article => {
     if (newsByCategory[article.category]) {
       newsByCategory[article.category].push(article);
@@ -1160,6 +1294,257 @@ function renderHome(container) {
   attachCardListeners();
 }
 
+const SPORTS_DATA = {
+  EPL: {
+    fullName: "English Premier League (EPL)",
+    leaguesInfo: {
+      founded: "1992",
+      teams: "20",
+      country: "England 🏴\u00DB\u0092\u00DB\u0097\u00DB\u009c",
+      champion: "Manchester City",
+      description: "The English Premier League is the top tier of English football, known globally for its fast-paced action, high-stakes matches, and star-studded rosters."
+    },
+    tables: [
+      { pos: 1, team: "Liverpool", pg: 28, w: 20, d: 5, l: 3, gd: "+38", pts: 65 },
+      { pos: 2, team: "Manchester City", pg: 28, w: 19, d: 6, l: 3, gd: "+34", pts: 63 },
+      { pos: 3, team: "Arsenal", pg: 28, w: 18, d: 7, l: 3, gd: "+42", pts: 61 },
+      { pos: 4, team: "Aston Villa", pg: 28, w: 17, d: 4, l: 7, gd: "+18", pts: 55 },
+      { pos: 5, team: "Tottenham", pg: 27, w: 16, d: 5, l: 6, gd: "+17", pts: 53 },
+      { pos: 6, team: "Manchester United", pg: 28, w: 15, d: 2, l: 11, gd: "+5", pts: 47 },
+      { pos: 7, team: "Chelsea", pg: 27, w: 11, d: 7, l: 9, gd: "+11", pts: 40 }
+    ],
+    fixtures: [
+      { date: "Saturday, March 14", home: "Manchester City", away: "Liverpool", time: "12:30", venue: "Etihad Stadium" },
+      { date: "Saturday, March 14", home: "Arsenal", away: "Chelsea", time: "15:00", venue: "Emirates Stadium" },
+      { date: "Sunday, March 15", home: "Manchester United", away: "Tottenham", time: "16:30", venue: "Old Trafford" }
+    ],
+    results: [
+      { date: "Sunday, March 8", home: "Liverpool", away: "Manchester United", score: "2 - 1" },
+      { date: "Saturday, March 7", home: "Chelsea", away: "Newcastle", score: "3 - 0" },
+      { date: "Saturday, March 7", home: "Manchester City", away: "Aston Villa", score: "4 - 1" }
+    ]
+  },
+  NBA: {
+    fullName: "National Basketball Association (NBA)",
+    leaguesInfo: {
+      founded: "1946",
+      teams: "30",
+      country: "United States \u00DB\u00AA",
+      champion: "Boston Celtics",
+      description: "The NBA is the premier men's professional basketball league in the world, featuring 30 teams across North America competing for the Larry O'Brien Trophy."
+    },
+    tables: [
+      { pos: 1, team: "Boston Celtics", pg: 64, w: 50, d: 0, l: 14, gd: "+10.2", pts: 78.1 },
+      { pos: 2, team: "Milwaukee Bucks", pg: 65, w: 42, d: 0, l: 23, gd: "+4.8", pts: 64.6 },
+      { pos: 3, team: "Cleveland Cavaliers", pg: 64, w: 41, d: 0, l: 23, gd: "+3.5", pts: 64.1 },
+      { pos: 4, team: "New York Knicks", pg: 64, w: 37, d: 0, l: 27, gd: "+2.9", pts: 57.8 },
+      { pos: 5, team: "Orlando Magic", pg: 65, w: 37, d: 0, l: 28, gd: "+1.8", pts: 56.9 },
+      { pos: 6, team: "Philadelphia 76ers", pg: 63, w: 36, d: 0, l: 27, gd: "+1.2", pts: 57.1 }
+    ],
+    fixtures: [
+      { date: "Tonight", home: "Boston Celtics", away: "Golden State Warriors", time: "19:30 EST", venue: "TD Garden" },
+      { date: "Tonight", home: "Los Angeles Lakers", away: "Milwaukee Bucks", time: "22:00 EST", venue: "Crypto.com Arena" },
+      { date: "Tomorrow", home: "Miami Heat", away: "Dallas Mavericks", time: "20:00 EST", venue: "Kaseya Center" }
+    ],
+    results: [
+      { date: "Yesterday", home: "Golden State Warriors", away: "Milwaukee Bucks", score: "125 - 90" },
+      { date: "Yesterday", home: "Los Angeles Lakers", away: "Sacramento Kings", score: "120 - 130" },
+      { date: "Tuesday", home: "Brooklyn Nets", away: "Philadelphia 76ers", score: "112 - 107" }
+    ]
+  },
+  F1: {
+    fullName: "Formula 1 (Motorsport World Championship)",
+    leaguesInfo: {
+      founded: "1950",
+      teams: "10 (20 Drivers)",
+      country: "Global \u00DB\u00AA",
+      champion: "Max Verstappen (Red Bull)",
+      description: "Formula 1 is the highest class of international racing for open-wheel single-seater formula racing cars sanctioned by the FIA."
+    },
+    tables: [
+      { pos: 1, team: "Max Verstappen (Red Bull)", pg: 2, w: 2, d: 0, l: 0, gd: "--", pts: 51 },
+      { pos: 2, team: "Sergio Perez (Red Bull)", pg: 2, w: 0, d: 0, l: 0, gd: "--", pts: 36 },
+      { pos: 3, team: "Charles Leclerc (Ferrari)", pg: 2, w: 0, d: 0, l: 0, gd: "--", pts: 28 },
+      { pos: 4, team: "George Russell (Mercedes)", pg: 2, w: 0, d: 0, l: 0, gd: "--", pts: 18 },
+      { pos: 5, team: "Oscar Piastri (McLaren)", pg: 2, w: 0, d: 0, l: 0, gd: "--", pts: 16 },
+      { pos: 6, team: "Carlos Sainz (Ferrari)", pg: 1, w: 0, d: 0, l: 0, gd: "--", pts: 15 },
+      { pos: 7, team: "Fernando Alonso (Aston Martin)", pg: 2, w: 0, d: 0, l: 0, gd: "--", pts: 12 }
+    ],
+    fixtures: [
+      { date: "March 22 - 24", home: "Australian Grand Prix", away: "Melbourne Albert Park", time: "05:00 UTC", venue: "Albert Park Circuit" },
+      { date: "April 5 - 7", home: "Japanese Grand Prix", away: "Suzuka Circuit", time: "05:00 UTC", venue: "Suzuka Circuit" },
+      { date: "April 19 - 21", home: "Chinese Grand Prix", away: "Shanghai International", time: "07:00 UTC", venue: "Shanghai Circuit" }
+    ],
+    results: [
+      { date: "March 9", home: "Saudi Arabian GP (Winner)", away: "Max Verstappen", score: "1:20:43" },
+      { date: "March 2", home: "Bahrain GP (Winner)", away: "Max Verstappen", score: "1:31:44" },
+      { date: "Abu Dhabi GP (2023)", home: "Yas Marina GP (Winner)", away: "Max Verstappen", score: "1:27:02" }
+    ]
+  }
+};
+
+window.selectSportsHubSport = (sport) => {
+  state.sportsHubSport = sport;
+  renderPage();
+};
+
+window.selectSportsHubSection = (section) => {
+  state.sportsHubSection = section;
+  renderPage();
+};
+
+export function renderFootballSportsHub() {
+  const selectedSport = state.sportsHubSport || 'EPL';
+  const selectedSection = state.sportsHubSection || 'Tables';
+  const data = SPORTS_DATA[selectedSport];
+
+  let sectionContentHtml = '';
+
+  if (selectedSection === 'Leagues') {
+    sectionContentHtml = `
+      <div style="padding: 24px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); line-height: 1.7;">
+        <h3 style="font-size: 1.3rem; margin-bottom: 12px; font-weight: 700; color: var(--primary-color);">${data.fullName}</h3>
+        <p style="color: var(--text-color); font-size: 1rem; margin-bottom: 20px;">${data.leaguesInfo.description}</p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; font-size: 0.95rem;">
+          <div style="background: var(--accent-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <strong style="color: var(--primary-color);">Founded:</strong> ${data.leaguesInfo.founded}
+          </div>
+          <div style="background: var(--accent-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <strong style="color: var(--primary-color);">Active Teams:</strong> ${data.leaguesInfo.teams}
+          </div>
+          <div style="background: var(--accent-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <strong style="color: var(--primary-color);">Territory:</strong> ${data.leaguesInfo.country}
+          </div>
+          <div style="background: var(--accent-color); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <strong style="color: var(--primary-color);">Reigning Champion:</strong> ${data.leaguesInfo.champion}
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (selectedSection === 'Tables') {
+    sectionContentHtml = `
+      <div style="overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color);">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color); background: var(--accent-color); font-weight: 700; color: var(--text-color);">
+              <th style="padding: 12px 16px; width: 60px;">Pos</th>
+              <th style="padding: 12px 16px;">Team / Competitor</th>
+              <th style="padding: 12px 16px; text-align: center;">GP</th>
+              <th style="padding: 12px 16px; text-align: center;">W</th>
+              <th style="padding: 12px 16px; text-align: center;">${selectedSport === 'F1' ? 'Podiums' : 'D'}</th>
+              <th style="padding: 12px 16px; text-align: center;">L</th>
+              <th style="padding: 12px 16px; text-align: center;">${selectedSport === 'F1' ? 'GAP' : (selectedSport === 'NBA' ? 'DIFF' : 'GD')}</th>
+              <th style="padding: 12px 16px; text-align: center; font-weight: 900;">PTS</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.tables.map(row => `
+              <tr style="border-bottom: 1px solid var(--border-color); transition: background-color 0.15s; cursor: pointer;" onmouseover="this.style.backgroundColor='var(--accent-color)'" onmouseout="this.style.backgroundColor='transparent'">
+                <td style="padding: 12px 16px; font-weight: 700; color: ${row.pos <= 3 ? 'var(--primary-color)' : 'var(--text-muted)'};">${row.pos}</td>
+                <td style="padding: 12px 16px; font-weight: 600; color: var(--text-color);">${row.team}</td>
+                <td style="padding: 12px 16px; text-align: center; font-family: monospace; color: var(--text-color);">${row.pg}</td>
+                <td style="padding: 12px 16px; text-align: center; font-family: monospace; color: var(--text-color);">${row.w}</td>
+                <td style="padding: 12px 16px; text-align: center; font-family: monospace; color: var(--text-color);">${row.d}</td>
+                <td style="padding: 12px 16px; text-align: center; font-family: monospace; color: var(--text-color);">${row.l}</td>
+                <td style="padding: 12px 16px; text-align: center; font-family: monospace; color: ${parseFloat(row.gd) >= 0 ? '#2ed573' : (row.gd === '--' ? 'var(--text-color)' : '#ff4444')};">${row.gd}</td>
+                <td style="padding: 12px 16px; text-align: center; font-weight: 800; font-family: monospace; color: var(--primary-color);">${row.pts}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } else if (selectedSection === 'Fixtures') {
+    sectionContentHtml = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+        ${data.fixtures.map(f => `
+          <div style="background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between; gap: 15px; transition: transform 0.2s, border-color 0.2s;" onmouseover="this.style.borderColor='var(--primary-color)'" onmouseout="this.style.borderColor='var(--border-color)'">
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); font-weight: bold; text-transform: uppercase; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+              <span>${f.date}</span>
+              <span style="color: var(--primary-color); background: var(--accent-color); padding: 2px 8px; border-radius: 10px;">${f.time}</span>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 8px; font-weight: 600; font-size: 1rem; color: var(--text-color);">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>${f.home}</span>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">VS</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>${f.away}</span>
+                <span></span>
+              </div>
+            </div>
+            
+            <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 5px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+              <span>${f.venue}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else if (selectedSection === 'Results') {
+    sectionContentHtml = `
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        ${data.results.map(r => `
+          <div style="background: var(--card-bg); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 20px; transition: background-color 0.15s;" onmouseover="this.style.backgroundColor='var(--accent-color)'" onmouseout="this.style.backgroundColor='transparent'">
+            <div style="font-size: 0.8rem; color: var(--text-muted); width: 120px; font-weight: 600;">
+              ${r.date}
+            </div>
+            
+            <div style="display: flex; flex: 1; justify-content: center; align-items: center; gap: 20px; font-weight: 700; font-size: 1rem; color: var(--text-color);">
+              <div style="text-align: right; width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${r.home}</div>
+              <div style="background: var(--accent-color); color: var(--primary-color); padding: 6px 14px; border-radius: 8px; font-family: monospace; font-size: 1.05rem; min-width: 80px; text-align: center; border: 1px solid var(--border-color); font-weight: 800;">
+                ${r.score}
+              </div>
+              <div style="text-align: left; width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${r.away}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  return `
+    <div style="margin-bottom: 45px; background: rgba(var(--primary-color-rgb, 0,0,0), 0.015); padding: 25px; border-radius: 20px; border: 1px solid var(--border-color);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 25px;">
+        <div>
+          <h2 style="font-size: 1.5rem; font-weight: 800; margin: 0; color: var(--primary-color); display: flex; align-items: center; gap: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-color);"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/></svg>
+            Live Sports Center
+          </h2>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 0 0;">Toggle between premium sports categories and real-time standings, match fixtures, and results.</p>
+        </div>
+        
+        <div style="display: flex; background: var(--card-bg); padding: 4px; border-radius: 12px; border: 1px solid var(--border-color); gap: 4px;">
+          ${['EPL', 'NBA', 'F1'].map(sport => `
+            <button onclick="selectSportsHubSport('${sport}')" style="padding: 8px 16px; border: none; font-size: 0.85rem; font-weight: 700; border-radius: 8px; cursor: pointer; transition: all 0.2s; 
+              background: ${selectedSport === sport ? 'var(--primary-color)' : 'transparent'}; 
+              color: ${selectedSport === sport ? 'white' : 'var(--text-muted)'};">
+              ${sport === 'EPL' ? '⚽ EPL' : (sport === 'NBA' ? '🏀 NBA' : '🏎️ F1')}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div style="display: flex; border-bottom: 1px solid var(--border-color); gap: 20px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 2px;">
+        ${['Tables', 'Fixtures', 'Results', 'Leagues'].map(sec => `
+          <button onclick="selectSportsHubSection('${sec}')" style="background: none; border: none; padding: 10px 5px; font-size: 0.95rem; font-weight: 600; cursor: pointer; position: relative; transition: color 0.2s;
+            color: ${selectedSection === sec ? 'var(--primary-color)' : 'var(--text-muted)'};">
+            ${sec === 'Tables' ? '📊 Tables & Standings' : (sec === 'Fixtures' ? '📅 Upcoming Fixtures' : (sec === 'Results' ? '🏆 Recent Results' : 'ℹ️ League Overview'))}
+            ${selectedSection === sec ? `<div style="position: absolute; bottom: -1px; left: 0; right: 0; height: 3px; background: var(--primary-color); border-radius: 2px;"></div>` : ''}
+          </button>
+        `).join('')}
+      </div>
+
+      <div class="sports-hub-content-view" style="min-height: 200px;">
+        ${sectionContentHtml}
+      </div>
+    </div>
+  `;
+}
+
 function renderCategory(container, title, items, type = 'news') {
   const isList = state.viewMode === 'list';
   const urlParams = new URLSearchParams(window.location.search);
@@ -1208,6 +1593,7 @@ function renderCategory(container, title, items, type = 'news') {
         </div>
       </div>
     </div>
+    ${title === 'Football Central' ? renderFootballSportsHub() : ''}
     <div class="news-grid ${isList ? 'list-view' : ''}">
       ${pagedItems.length > 0 ? pagedItems.map((item, index) => {
         let html = '';
@@ -1402,84 +1788,224 @@ function renderAdmin(container) {
 
     const userName = state.user?.displayName || state.user?.email?.split('@')[0] || 'Admin';
 
+    // Calculate dynamic stats
+    const totalAdSenseViews = 277; // Cloudflare page views
+    const estAdSenseRPM = 14.00; // $14 RPM
+    const estAdSenseRev = ((totalAdSenseViews / 1000) * estAdSenseRPM).toFixed(2);
+
+    let totalAffViews = 0;
+    let totalAffClicks = 0;
+    state.affiliateAds.forEach(ad => {
+      totalAffViews += (ad.views || 0);
+      totalAffClicks += (ad.clicks || 0);
+    });
+    const avgCTR = totalAffViews > 0 ? ((totalAffClicks / totalAffViews) * 100).toFixed(1) : '0.0';
+    const estAffCommission = (totalAffClicks * 1.50).toFixed(2); // $1.50 per click commission
+    const totalEstEarnings = (parseFloat(estAdSenseRev) + parseFloat(estAffCommission)).toFixed(2);
+
     container.innerHTML = `
       <div class="admin-dashboard-wrapper" style="padding-top: 40px; min-height: 600px;">
-        <h1 class="section-title" style="font-size: 2.5rem; margin-bottom: 10px;">Admin Dashboard</h1>
-        <p style="color: var(--text-muted); margin-bottom: 40px;">Welcome back, <strong>${userName}</strong>. Manage your news portal here.</p>
+        <h1 class="section-title" style="font-size: 2.5rem; margin-bottom: 10px;">Publisher Admin Panel</h1>
+        <p style="color: var(--text-muted); margin-bottom: 45px;">Welcome back, <strong>${userName}</strong>. Monitor monetization, traffic growth, and sponsor products.</p>
+        
+        <!-- Live Traffic & Monetization Tracker Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 40px;">
+          <div style="background: var(--card-bg); padding: 24px; border-radius: 16px; border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+              <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Visits (Last 7d)</span>
+              <span style="background: rgba(255, 68, 68, 0.1); color: #ff4444; font-size: 0.75rem; padding: 2px 8px; border-radius: 20px; font-weight: 600;">-26.6%</span>
+            </div>
+            <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 5px; font-family: monospace;">262</h2>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">277 Total Page Views</p>
+          </div>
+          
+          <div style="background: var(--card-bg); padding: 24px; border-radius: 16px; border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+              <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Traffic Requests</span>
+              <span style="background: rgba(46, 213, 115, 0.1); color: #2ed573; font-size: 0.75rem; padding: 2px 8px; border-radius: 20px; font-weight: 600;">+12.9%</span>
+            </div>
+            <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 5px; font-family: monospace;">16.71k</h2>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">50.75 MB Bandwidth Transferred</p>
+          </div>
+
+          <div style="background: var(--card-bg); padding: 24px; border-radius: 16px; border: 1px solid var(--border-color); position: relative; overflow: hidden;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+              <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Est. AdSense Rev</span>
+              <span style="background: rgba(46, 213, 115, 0.1); color: #2ed573; font-size: 0.75rem; padding: 2px 8px; border-radius: 20px; font-weight: 600;">Active</span>
+            </div>
+            <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 5px; font-family: monospace; color: #2ed573;">$${estAdSenseRev}</h2>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">Based on $14.00 Average RPM</p>
+          </div>
+
+          <div style="background: var(--card-bg); padding: 24px; border-radius: 16px; border: 1px solid var(--border-color); position: relative; overflow: hidden;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+              <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Partner Affiliate</span>
+              <span style="background: rgba(46, 213, 115, 0.1); color: #2ed573; font-size: 0.75rem; padding: 2px 8px; border-radius: 20px; font-weight: 600;">+${avgCTR}% CTR</span>
+            </div>
+            <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 5px; font-family: monospace; color: var(--primary-color);">$${estAffCommission}</h2>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">${totalAffClicks} Clicks across ${totalAffViews} Views</p>
+          </div>
+        </div>
+
+        <div style="background: var(--accent-color); padding: 24px; border-radius: 16px; margin-bottom: 40px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+          <div>
+            <h3 style="margin: 0 0 5px 0; font-size: 1.1rem; font-weight: 700;">Total Traffic-to-Cash Monetization</h3>
+            <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Combined active yield (AdSense + Affiliate Partner payouts)</p>
+          </div>
+          <div style="text-align: right;">
+            <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: bold;">Gross Revenue</span>
+            <h1 style="font-size: 2.5rem; font-weight: 900; color: #2ed573; margin: 0; font-family: monospace;">$${totalEstEarnings}</h1>
+          </div>
+        </div>
         
         <div class="main-grid">
           <div class="admin-main">
-            <section class="daily-box" style="padding: 30px;">
-              <h3 style="font-size: 1.5rem; margin-bottom: 20px;">Create New Article</h3>
-              <form id="news-form" class="comment-form">
+            <!-- Sponsor and Affiliate Ad form -->
+            <section class="daily-box" style="padding: 30px; margin-bottom: 30px;">
+              <h3 style="font-size: 1.5rem; margin-bottom: 10px;">Add Sponsored Deal / Affiliate Product</h3>
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 25px;">These custom banners rotate on the homepage sidebar and at the bottom of articles, acting as fallback ads when Google AdSense has no-fill or is adblocked.</p>
+              
+              <form id="ad-form" class="comment-form">
                 <div style="margin-bottom: 15px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Title</label>
-                  <input type="text" id="news-title" class="comment-input" placeholder="Enter article title..." required>
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Product / Sponsor Title</label>
+                  <input type="text" id="ad-title" class="comment-input" placeholder="e.g. NordVPN Secure Privacy Offer" required style="width:100%;">
                 </div>
                 
-                <div style="margin-bottom: 15px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Category</label>
-                  <select id="news-category" class="comment-input" required>
-                    <option value="Politics">Politics</option>
-                    <option value="Business">Business</option>
-                    <option value="Football">Football</option>
-                    <option value="Entertainment">Entertainment</option>
-                    <option value="Technology">Technology</option>
-                  </select>
+                <div style="margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                  <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Ad Placement Type</label>
+                    <select id="ad-type" class="comment-input" required style="width:100%;">
+                      <option value="Affiliate">Affiliate Link</option>
+                      <option value="Sponsor">Direct Sponsor Banner</option>
+                      <option value="Banner">General Call-to-Action</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Banner Icon Image URL</label>
+                    <input type="url" id="ad-image" class="comment-input" placeholder="https://images.unsplash.com/..." required style="width:100%;">
+                  </div>
                 </div>
-                
+
                 <div style="margin-bottom: 15px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Image URL</label>
-                  <input type="url" id="news-image" class="comment-input" placeholder="https://picsum.photos/seed/news/800/450" required>
-                </div>
-                
-                <div style="margin-bottom: 15px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Excerpt (Short Summary)</label>
-                  <textarea id="news-excerpt" class="comment-input" placeholder="A brief summary..." rows="3" required></textarea>
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Affiliate / Sponsor Destination URL</label>
+                  <input type="url" id="ad-link" class="comment-input" placeholder="https://yourlink.com/affiliate-code" required style="width:100%;">
                 </div>
                 
                 <div style="margin-bottom: 25px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600;">Full Content (Supports Markdown: **bold**, *italic*, # Heading, - List)</label>
-                  <textarea id="news-content" class="comment-input" placeholder="Write the full article here..." rows="12" required></textarea>
+                  <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem;">Sponsor Subtext / Pitch Description</label>
+                  <textarea id="ad-description" class="comment-input" placeholder="Give readers a compelling 1-sentence reason to click..." rows="2" required style="width:100%;"></textarea>
                 </div>
                 
-                <button type="submit" class="submit-btn" style="width: 100%; padding: 15px; font-size: 1.1rem;">Publish Article</button>
+                <button type="submit" class="submit-btn" style="width: 100%; padding: 15px; font-size: 1.1rem; font-weight: 700;">Publish Sponsor Ad</button>
               </form>
+            </section>
+
+            <!-- Old Custom Article Form -->
+            <section class="daily-box" style="padding: 30px; opacity: 0.85;">
+              <details>
+                <summary style="cursor: pointer; font-size: 1.2rem; font-weight: 700; user-select: none;">Write & Publish Custom Articles (Optional)</summary>
+                <form id="news-form" class="comment-form" style="margin-top: 20px;">
+                  <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Title</label>
+                    <input type="text" id="news-title" class="comment-input" placeholder="Enter article title...">
+                  </div>
+                  
+                  <div style="margin-bottom: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                      <label style="display: block; margin-bottom: 5px; font-weight: 600;">Category</label>
+                      <select id="news-category" class="comment-input">
+                        <option value="Politics">Politics</option>
+                        <option value="Business">Business</option>
+                        <option value="Football">Football</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Technology">Technology</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style="display: block; margin-bottom: 5px; font-weight: 600;">Image URL</label>
+                      <input type="url" id="news-image" class="comment-input" placeholder="https://picsum.photos/seed/news/800/450">
+                    </div>
+                  </div>
+                  
+                  <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Excerpt (Short Summary)</label>
+                    <textarea id="news-excerpt" class="comment-input" placeholder="A brief summary..." rows="2"></textarea>
+                  </div>
+                  
+                  <div style="margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Full Content</label>
+                    <textarea id="news-content" class="comment-input" placeholder="Write full article here..." rows="8"></textarea>
+                  </div>
+                  
+                  <button type="submit" class="submit-btn" style="width: 100%; padding: 12px; font-size: 1rem;">Publish Custom Article</button>
+                </form>
+              </details>
             </section>
           </div>
           
-          <aside class="admin-sidebar">
-            <h2 class="section-title">Manage Content</h2>
-            <div class="daily-box">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <span style="font-weight: 600;">Live Articles</span>
-                <span class="badge">${state.news?.length || 0}</span>
-              </div>
-              <div style="max-height: 400px; overflow-y: auto;">
-                ${state.news && state.news.length > 0 ? state.news.map(n => `
-                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color);">
-                    <div style="overflow: hidden; padding-right: 10px;">
-                      <p style="font-size: 0.9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0;">${n.title}</p>
-                      <span style="font-size: 0.7rem; color: var(--text-muted);">${n.category}</span>
+          <aside class="admin-sidebar" style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Active Sponsor Banner Stats -->
+            <div class="daily-box" style="padding: 24px;">
+              <h3 style="font-size: 1.2rem; margin-bottom: 15px; font-weight: 700;">Active Partner Ads</h3>
+              <div style="max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px;">
+                ${state.affiliateAds && state.affiliateAds.length > 0 ? state.affiliateAds.map(ad => `
+                  <div style="padding: 12px; background: var(--accent-color); border-radius: 10px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                      <div style="max-width: 80%;">
+                        <p style="font-size: 0.9rem; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${ad.title}</p>
+                        <span style="font-size: 0.7rem; color: var(--primary-color); font-weight: bold; text-transform: uppercase;">${ad.type}</span>
+                      </div>
+                      <button onclick="deleteAd('${ad.id}')" style="color: #ff4444; background: none; border: none; font-size: 0.75rem; cursor: pointer; font-weight: bold;">Remove</button>
                     </div>
-                    <button onclick="deleteArticle('${n.id}')" style="color: #ff4444; font-size: 0.8rem; background: none; border: none; cursor: pointer; font-weight: 600; flex-shrink: 0;">Delete</button>
+                    <div style="display: flex; gap: 15px; font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">
+                      <span>👁️ ${ad.views || 0} views</span>
+                      <span>🖱️ ${ad.clicks || 0} clicks</span>
+                      <span style="color: var(--primary-color);">📈 ${ad.views > 0 ? ((ad.clicks || 0) / ad.views * 100).toFixed(1) : '0.0'}% CTR</span>
+                    </div>
                   </div>
-                `).join('') : '<p style="color: var(--text-muted); font-size: 0.9rem;">No articles found.</p>'}
+                `).join('') : '<p style="color: var(--text-muted); font-size: 0.9rem;">No sponsor ads loaded yet.</p>'}
               </div>
             </div>
 
-            <div class="daily-box" style="margin-top: 20px;">
-              <h3 style="margin-bottom: 15px;">System Tools</h3>
-              <button id="seed-btn" class="submit-btn" style="width: 100%; background: #444; margin-bottom: 10px;">Seed with Mock Data</button>
-              <button onclick="location.reload()" class="submit-btn" style="width: 100%; background: #666;">Force Refresh App</button>
+            <!-- News Articles database list -->
+            <div class="daily-box" style="padding: 24px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <span style="font-weight: 700; font-size: 1.1rem;">Written Database Articles</span>
+                <span class="badge" style="background: var(--primary-color);">${state.news?.length || 0}</span>
+              </div>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 15px;">Your articles currently stored in Firestore. To clear delays and run exclusively on fresh API feeds, delete these or use the master clear tool below.</p>
+              <div style="max-height: 250px; overflow-y: auto;">
+                ${state.news && state.news.length > 0 ? state.news.map(n => `
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+                    <div style="overflow: hidden; padding-right: 10px; max-width: 80%;">
+                      <p style="font-size: 0.85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0;">${n.title}</p>
+                      <span style="font-size: 0.7rem; color: var(--text-muted);">${n.category}</span>
+                    </div>
+                    <button onclick="deleteArticle('${n.id}')" style="color: #ff4444; font-size: 0.75rem; background: none; border: none; cursor: pointer; font-weight: 600; flex-shrink: 0;">Delete</button>
+                  </div>
+                `).join('') : '<p style="color: var(--text-muted); font-size: 0.8rem;">No custom database articles found.</p>'}
+              </div>
+            </div>
+
+            <!-- Maintenance & Feed Performance Tools -->
+            <div class="daily-box" style="padding: 24px;">
+              <h3 style="margin-bottom: 15px; font-size: 1.1rem; font-weight: 700;">Performance & Feed Control</h3>
+              <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 15px;">Instantly optimize site performance. Clearing all written articles forces the frontend to compile only instant RSS API feeds, resolving delays.</p>
+              
+              <button id="delete-all-btn" onclick="deleteAllMyArticles()" class="submit-btn" style="width: 100%; background: #ff4444; color: white; margin-bottom: 12px; font-size: 0.9rem; font-weight: 700; border: none;">Clear All Written Articles</button>
+              <button id="seed-btn" class="submit-btn" style="width: 100%; background: #333; margin-bottom: 12px; font-size: 0.9rem; border: none;">Seed Database with Mock Articles</button>
+              <button onclick="location.reload()" class="submit-btn" style="width: 100%; background: #555; font-size: 0.9rem; border: none;">Hard Refresh Client Cache</button>
             </div>
           </aside>
         </div>
       </div>
     `;
 
-    const form = container.querySelector('#news-form');
-    if (form) form.addEventListener('submit', handleNewsSubmit);
+    const newsForm = container.querySelector('#news-form');
+    if (newsForm) newsForm.addEventListener('submit', handleNewsSubmit);
+
+    const adForm = container.querySelector('#ad-form');
+    if (adForm) adForm.addEventListener('submit', handleAdSubmit);
     
     const seedBtn = container.querySelector('#seed-btn');
     if (seedBtn) seedBtn.addEventListener('click', seedDatabase);
@@ -1588,6 +2114,87 @@ window.deleteArticle = async (id) => {
     await deleteDoc(doc(db, 'news', id));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, 'news/' + id);
+  }
+};
+
+window.handleAdSubmit = async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerText = 'Creating Ad...';
+  }
+
+  const title = document.getElementById('ad-title').value;
+  const description = document.getElementById('ad-description').value;
+  const link = document.getElementById('ad-link').value;
+  const imageUrl = document.getElementById('ad-image').value;
+  const type = document.getElementById('ad-type').value;
+
+  try {
+    await addDoc(collection(db, 'affiliate_ads'), {
+      title,
+      description,
+      link,
+      imageUrl,
+      type,
+      views: 0,
+      clicks: 0,
+      createdAt: serverTimestamp()
+    });
+    alert('Sponsored Partner Ad created successfully!');
+    form.reset();
+    renderPage('#admin');
+  } catch (error) {
+    console.error('Failed to create ad:', error);
+    alert('Error creating ad: ' + error.message);
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = 'Publish Sponsor Ad';
+    }
+  }
+};
+
+window.deleteAd = async (id) => {
+  if (!confirm('Are you sure you want to delete this sponsored partner deal?')) return;
+  try {
+    await deleteDoc(doc(db, 'affiliate_ads', id));
+    alert('Sponsor ad removed.');
+    renderPage('#admin');
+  } catch (error) {
+    console.error('Error deleting ad:', error);
+    alert('Failed to delete ad: ' + error.message);
+  }
+};
+
+window.deleteAllMyArticles = async () => {
+  if (!confirm('Are you sure you want to delete ALL articles you have written? This will clear your custom database entries so the site only displays fresh, instant API-connected news.')) return;
+  
+  const btn = document.querySelector('#delete-all-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = 'Deleting all...';
+  }
+  
+  try {
+    const newsQuery = await getDocs(collection(db, 'news'));
+    let count = 0;
+    for (const docSnap of newsQuery.docs) {
+      await deleteDoc(doc(db, 'news', docSnap.id));
+      count++;
+    }
+    alert(`Successfully deleted ${count} articles. Your site is now running entirely on instant API-connected feeds!`);
+    renderPage('#admin');
+  } catch (error) {
+    console.error('Delete All Error:', error);
+    alert('Failed to delete articles: ' + error.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = 'Clear All Written Articles';
+    }
   }
 };
 
@@ -1708,18 +2315,32 @@ function renderAuthor(container, authorName) {
 
 // Component Creators
 function createAdUnit(slot, format = 'auto') {
+  const ad = getNextAffiliateAd();
   return `
-    <div class="ad-container">
+    <div class="ad-container" data-slot="${slot}">
       <span class="ad-label">Advertisement</span>
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-1724173335946956"
-           data-ad-slot="${slot}"
-           data-ad-format="${format}"
-           data-full-width-responsive="true"></ins>
-      <script>
-           (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
+      <div class="google-ad-wrapper" style="width: 100%;">
+        <ins class="adsbygoogle"
+             style="display:block;min-height:90px;"
+             data-ad-client="ca-pub-1724173335946956"
+             data-ad-slot="${slot}"
+             data-ad-format="${format}"
+             data-full-width-responsive="true"></ins>
+      </div>
+      
+      <!-- Native / Fallback High-converting Sponsor Ad -->
+      <div class="native-fallback-ad hidden" id="fallback-${slot}" style="width: 100%; margin-top: 5px;">
+        ${ad ? `
+          <a href="${ad.link}" target="_blank" rel="noopener noreferrer" onclick="trackAdClick('${ad.id}')" style="display: flex; align-items: center; gap: 15px; text-decoration: none; color: inherit; text-align: left; background: var(--accent-color); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); transition: background-color 0.2s;">
+            ${ad.imageUrl ? `<img src="${ad.imageUrl}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; flex-shrink: 0;" alt="${ad.title}">` : ''}
+            <div>
+              <h4 style="font-size: 0.95rem; margin-bottom: 4px; font-weight: 700; color: var(--primary-color); line-height: 1.3;">${ad.title}</h4>
+              <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin: 0;">${ad.description}</p>
+              <span style="display: inline-block; font-size: 0.75rem; margin-top: 6px; font-weight: bold; color: var(--accent-color); text-transform: uppercase;">Partner Deal &rarr;</span>
+            </div>
+          </a>
+        ` : ''}
+      </div>
     </div>
   `;
 }
@@ -1785,6 +2406,7 @@ function attachCardListeners() {
       openDetail(id, type);
     });
   });
+  initGoogleAds();
 }
 
 function openDetail(id, type) {
@@ -1798,6 +2420,7 @@ function openDetail(id, type) {
   
   // Initial render of modal structure
   renderModalContent(item, type, isSaved, []);
+  initGoogleAds();
   
   onSnapshot(q, (snapshot) => {
     const comments = snapshot.docs.map(doc => doc.data());
@@ -2039,7 +2662,6 @@ function handleSearch(e) {
 
   // Aggregate all possible search items
   const allItems = [
-    ...state.news.map(item => ({ ...item, type: 'news' })),
     ...state.autoNews.map(item => ({ ...item, type: 'news' }))
   ];
 

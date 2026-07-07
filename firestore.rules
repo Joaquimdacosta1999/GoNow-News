@@ -117,6 +117,12 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'user';
       allow update: if isAdmin() || (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role);
     }
+
+    match /affiliate_ads/{adId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if true;
+    }
     
     match /test/{docId} {
       allow read: if true;
