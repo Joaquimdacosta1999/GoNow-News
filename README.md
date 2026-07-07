@@ -23,7 +23,7 @@ GoNow is a high-performance, mobile-first news and lifestyle portal built with *
 
 - **Frontend:** Vanilla JS, HTML5, Modern CSS (Flex/Grid).
 - **Backend:** Node.js + Express (for routing and dev server).
-- **Database/Auth:** Firebase Firestore, Cloudflare & Google Auth.
+- **Database/Auth:** Firebase Firestore & Google Auth.
 - **Build Tool:** Vite 6.0 for production-grade bundling.
 
 ## How to Run Locally
