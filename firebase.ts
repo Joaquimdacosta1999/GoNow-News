@@ -24,6 +24,7 @@ import firebaseConfig from './firebase-applet-config.json';
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
+// Firestore export instance
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
@@ -79,16 +80,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
-
-// Test connection
-async function testConnection() {
-  try {
-    await getDoc(doc(db, 'test', 'connection'));
-  } catch (error) {
-    console.info("Firestore initial connection status:", error);
-  }
-}
-testConnection();
 
 export {
   signInWithPopup,
