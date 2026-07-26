@@ -43,8 +43,8 @@
   width: 100%;
   height: auto;
   max-height: 600px;
-  object-fit: contain;
-  background-color: #000;
+  object-fit: cover;
+  background-color: var(--card-bg);
   border-radius: 12px;
   margin-bottom: 24px;
 }
