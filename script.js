@@ -37,6 +37,12 @@ import {
   dailyQuotes 
 } from './data.js';
 
+// Analytics Initialization
+window.dataLayer = window.dataLayer || [];
+function gtag(){ window.dataLayer.push(arguments); }
+gtag('js', new Date());
+gtag('config', 'G-N1E8YBZ79W');
+
 // State Management
 const state = {
   currentTheme: localStorage.getItem('theme') || 'dark',
@@ -372,6 +378,15 @@ function init() {
   searchInput.addEventListener('input', handleSearch);
   authBtn.addEventListener('click', handleAuth);
 
+  // Mobile menu listener
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  if (mobileMenuBtn) {
+    mobileMenuBtn.addEventListener('click', () => {
+      const navLinks = document.querySelector('.nav-links');
+      if (navLinks) navLinks.classList.toggle('active');
+    });
+  }
+
   initNewsletter();
   initNotifBell();
 
@@ -568,6 +583,13 @@ function initNotifBell() {
       clearBadge();
     }
   });
+
+  const clearNotifBtn = document.getElementById('clear-notif-btn');
+  if (clearNotifBtn) {
+    clearNotifBtn.addEventListener('click', () => {
+      window.clearNotifications();
+    });
+  }
 
   document.addEventListener('click', () => {
     if (notifDropdown) notifDropdown.classList.remove('active');
