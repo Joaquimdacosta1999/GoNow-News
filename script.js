@@ -147,32 +147,32 @@ function generateFullOriginalArticle(item, category) {
     .trim();
 
   if (cleanSnippet.length < 20) {
-    cleanSnippet = `${item.title} has developed into a major topic of discussion across global policy, economic, and editorial channels.`;
+    cleanSnippet = `${item.title} has developed into a major topic of discussion across African policy, enterprise, and editorial channels.`;
   }
 
-  const title = (item.title || 'Breaking Intelligence Report').trim();
+  const title = (item.title || 'Breaking African Intelligence Report').trim();
   const dateStr = item.date || new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   let domainContext = '';
   if (category === 'Politics') {
-    domainContext = `Legislative negotiations, diplomatic channels, and executive oversight remain active as government officials and international observers analyze the operational consequences of this movement.`;
+    domainContext = `Constitutional oversight, parliamentary debate in Pretoria, Abuja, and Nairobi, alongside sovereign economic policy remain central as African lawmakers and analysts examine the tactical outcomes.`;
   } else if (category === 'Business') {
-    domainContext = `Financial markets and corporate strategists are assessing capital allocation, consumer sentiment, and regulatory compliance in light of these latest figures.`;
+    domainContext = `African capital markets, free-enterprise reforms, trade corridors under AfCFTA, and fiscal policies across the continent continue driving regional commerce.`;
   } else if (category === 'Football') {
-    domainContext = `Club managers, tactical analysts, and global supporters are scrutinizing squad selections, injury updates, and upcoming fixtures as league standings heat up.`;
+    domainContext = `Club managers across the DStv Premiership, NPFL, CAF Champions League, and European leagues closely analyze tactical developments and African international talent.`;
   } else if (category === 'Entertainment') {
-    domainContext = `Industry insiders and cultural commentators are gauging audience reception, digital engagement metrics, and streaming distribution impacts across major networks.`;
+    domainContext = `Creative leaders across Nollywood, South African cinema, Afrobeats, and Amapiano streaming channels continue expanding African cultural reach worldwide.`;
   } else if (category === 'Technology') {
-    domainContext = `Engineering leaders and tech founders are examining architecture scalability, security protocols, and competitive advantages stemming from this technological advance.`;
+    domainContext = `Fintech pioneers, mobile network infrastructure builders, and tech founders across Lagos, Johannesburg, Nairobi, and Cairo drive the next phase of African digital sovereignty.`;
   }
 
-  const section1 = `### Executive Overview\n\n**${title}** — In detailed reporting finalized on ${dateStr}, significant developments continue to unfold across the ${category.toLowerCase()} landscape.\n\n${cleanSnippet}\n\n${domainContext}`;
+  const section1 = `### Executive Overview\n\n**${title}** — In detailed African intelligence finalized on ${dateStr}, significant developments continue to unfold across the ${category.toLowerCase()} landscape.\n\n${cleanSnippet}\n\n${domainContext}`;
 
-  const section2 = `### Key Analysis & Underlying Factors\n\nA thorough review by GoNow analysts highlights several fundamental drivers behind today's news:\n\n* **Primary Catalyst:** Heightened institutional and public interest has placed renewed focus on immediate tactical decisions and long-term policies.\n* **Operational Focus:** Subject-matter experts and key leaders are prioritizing transparent communication, regulatory compliance, and swift execution.\n* **Industry Impact:** Market participants and stakeholders across related sectors are adjusting their forecasts to align with today's developments.`;
+  const section2 = `### Key Analysis & Underlying Factors\n\nA thorough review by GoNow African Intelligence correspondents highlights several fundamental drivers behind today's news:\n\n* **Primary Catalyst:** Heightened institutional and public interest across Southern, West, and East Africa has focused attention on sound policy and free enterprise.\n* **Operational Focus:** Subject-matter experts and regional leaders are prioritizing fiscal discipline, regulatory streamlining, and swift execution.\n* **Industry Impact:** Market participants and continental trade partners are adjusting their forecasts to align with today's developments.`;
 
-  const section3 = `### Editorial Insights & Strategic Perspectives\n\nAccording to senior correspondents at the GoNow ${category} Desk, today's report fits into a broader global trend observed over recent months.\n\n> *"Sustained leadership and clear execution will determine how effectively institutions navigate the opportunities and challenges presented by these developments,"* stated senior analysts at GoNow Intelligence.`;
+  const section3 = `### Editorial Insights & Strategic Perspectives\n\nAccording to senior correspondents at the GoNow Africa Bureau, today's report fits into a broader movement toward African economic self-reliance observed over recent months.\n\n> *"Principled leadership and free-market dynamism will determine how effectively African institutions capitalize on these opportunities,"* stated senior analysts at GoNow Africa Intelligence.`;
 
-  const section4 = `### Outlook & Upcoming Milestones\n\nMoving forward, several key indicators will determine the trajectory of this story:\n\n1. **Scheduled Reviews:** Stakeholders are preparing for upcoming official briefings, policy announcements, or match-day lineups.\n2. **Community & Public Reaction:** Further feedback from industry bodies, regulatory authorities, and key voices is anticipated throughout the week.\n3. **GoNow Continuous Coverage:** GoNow Intelligence will provide real-time updates as additional verified data becomes available.`;
+  const section4 = `### Outlook & Upcoming Milestones\n\nMoving forward, several key indicators will determine the trajectory of this story:\n\n1. **Scheduled Briefings:** Regional stakeholders are preparing for upcoming parliamentary sessions, central bank reviews, or CAF matchdays.\n2. **Commercial & Public Reaction:** Further feedback from African chambers of commerce, industry bodies, and community voices is expected.\n3. **GoNow Africa Continuous Coverage:** GoNow Intelligence will provide real-time updates as additional verified data becomes available.`;
 
   return [section1, section2, section3, section4].join('\n\n');
 }
@@ -181,41 +181,44 @@ function generateFullOriginalArticle(item, category) {
 async function syncAllNews() {
   const categoryConfigs = {
     'Politics': [
-      'https://moxie.foxnews.com/feed-publisher/politics.xml',
-      'https://www.breitbart.com/politics/feed/',
-      'https://www.washingtontimes.com/rss/headlines/news/politics/',
-      'https://www.washingtontimes.com/rss/headlines/business/politics/',
-      'https://www.washingtonexaminer.com/feed/politics/',
-      'https://nypost.com/politics/feed/'
+      'https://www.politicsweb.co.za/news-and-analysis/rss',
+      'https://www.vanguardngr.com/category/national-news/feed/',
+      'https://punchng.com/topics/news/feed/',
+      'https://thenationonlineng.net/feed/',
+      'https://dailypost.ng/politics/feed/',
+      'https://feeds.news24.com/articles/news24/SouthAfrica/rss',
+      'https://feeds.news24.com/articles/news24/Africa/rss',
+      'https://www.the-star.co.ke/rss/',
+      'https://citinewsroom.com/feed/'
     ],
     'Business': [
-      'https://moxie.foxnews.com/feed-publisher/business.xml',
-      'https://www.breitbart.com/the-economy/feed/',
-      'https://www.washingtontimes.com/rss/headlines/business/',
-      'https://fortune.com/feed/',
-      'https://nypost.com/business/feed/',
-      'https://www.economist.com/business/rss.xml'
+      'https://businessday.ng/feed/',
+      'https://www.moneyweb.co.za/feed/',
+      'https://www.cnbcafrica.com/feed/',
+      'https://nairametrics.com/feed/',
+      'https://venturasafrica.com/feed/',
+      'https://www.businesslive.co.za/rss/'
     ],
     'Football': [
-      'https://www.skysports.com/rss/12040',
-      'https://www.football.london/rss.xml',
-      'https://www.sportsmole.co.uk/football/index.rss',
-      'https://www.90min.com/posts.rss'
+      'https://www.kickoff.com/rss',
+      'https://www.soccerladuma.co.za/rss',
+      'https://www.sportsmole.co.uk/football/africa/index.rss',
+      'https://www.vanguardngr.com/category/sports/feed/',
+      'https://punchng.com/topics/sports/feed/'
     ],
     'Entertainment': [
-      'https://moxie.foxnews.com/feed-publisher/entertainment.xml',
-      'https://www.breitbart.com/entertainment/feed/',
-      'https://www.washingtonexaminer.com/feed/entertainment/',
-      'https://nypost.com/entertainment/feed/',
-      'https://variety.com/feed/'
+      'https://punchng.com/topics/entertainment/feed/',
+      'https://thenationonlineng.net/category/entertainment/feed/',
+      'https://dailypost.ng/entertainment/feed/',
+      'https://www.pulse.ng/entertainment/rss',
+      'https://www.the-star.co.ke/counties/entertainment/rss/'
     ],
     'Technology': [
-      'https://www.breitbart.com/tech/feed/',
-      'https://nypost.com/tech/feed/',
-      'https://moxie.foxnews.com/feed-publisher/tech.xml',
-      'https://www.washingtontimes.com/rss/headlines/news/technology/',
-      'https://www.washingtontimes.com/rss/headlines/business/technology/',
-      'https://www.dailywire.com/feed/'
+      'https://techcabal.com/feed/',
+      'https://disrupt-africa.com/feed/',
+      'https://techpoint.africa/feed/',
+      'https://ventureburn.com/feed/',
+      'https://www.itnewsafrica.com/feed/'
     ]
   };
 
@@ -241,7 +244,7 @@ async function syncAllNews() {
             const stableId = `auto-${name.toLowerCase()}-${hashString(item.title)}`;
             const cleanExcerptText = item.description 
               ? item.description.replace(/<[^>]*>?/gm, '').replace(/\[\+\]|\(.*?\)|read more on.*|click here to.*|http\S+/gi, '').trim()
-              : `${item.title} — Comprehensive coverage and verified insights from GoNow News.`;
+              : `${item.title} — Comprehensive coverage and verified insights from GoNow Africa News.`;
 
             const excerpt = cleanExcerptText.substring(0, 220) + (cleanExcerptText.length > 220 ? '...' : '');
             const synthesizedContent = generateFullOriginalArticle(item, name);
@@ -256,7 +259,7 @@ async function syncAllNews() {
               date: formattedDate,
               timestamp: pubDate.getTime(),
               readTime: `${Math.floor(Math.random() * 3) + 4} min read`,
-              author: `GoNow ${name} Desk`,
+              author: `GoNow Africa ${name} Bureau`,
               isAuto: true,
               source: item.link
             };

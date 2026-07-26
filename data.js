@@ -1,280 +1,215 @@
 /**
- * GoNow - Mock Data
- * Realistic sample content for the news and lifestyle portal.
+ * GoNow - African News & Free-Market Intelligence
+  * Focused on South Africa, Nigeria, Kenya, Ghana, Egypt & Pan-African News.
  */
 
 export const newsData = [
-  // Politics
+  // Politics - African Sovereign Policy & Governance
   {
     id: 'p1',
     category: 'Politics',
-    title: 'New Global Climate Agreement Signed',
-    excerpt: 'World leaders have come together to sign a historic deal aimed at reducing carbon emissions by 50% by 2030.',
-    content: 'In a landmark summit held in Geneva, representatives from over 190 nations have officially signed the "Green Future Accord." This agreement sets ambitious targets for renewable energy transition and provides financial support for developing nations to adapt to climate change. Experts say this is the most significant step forward since the Paris Agreement.',
-    image: 'https://picsum.photos/seed/politics1/800/450',
-    date: '2026-05-10',
+    title: 'South Africa Parliamentary Coalition Pushes Free-Market Deregulation',
+    excerpt: 'Lawmakers in Pretoria table landmark legislative package designed to slice bureaucracy and boost private sector infrastructure investment.',
+    content: 'In a significant policy turn in Pretoria, parliamentary leaders have introduced a comprehensive deregulation bill aimed at unleashing private capital across key state-dominated sectors including energy, ports, and rail logistics. Advocates argue that removing restrictive red tape and fiscal constraints is the single most effective catalyst for generating sustainable employment and expanding national GDP across Southern Africa.',
+    image: 'https://images.unsplash.com/photo-1541872703-74c5e44383f5?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-26',
     readTime: '4 min'
   },
   {
     id: 'p2',
     category: 'Politics',
-    title: 'Local Elections Show Surprising Results',
-    excerpt: 'Independent candidates have seen a massive surge in support across several key districts in the latest voting round.',
-    content: 'The recent local elections have sent shockwaves through the political establishment as independent candidates secured victories in traditional party holdouts. Voters cited a desire for "fresh perspectives" and "community-focused leadership" as their primary reasons for shifting away from major parties.',
-    image: 'https://picsum.photos/seed/politics2/800/450',
-    date: '2026-05-09',
+    title: 'Nigeria Fiscal Responsibility Act Strengthens Budgetary Accountability',
+    excerpt: 'Abuja adopts strict fiscal caps to rein in inflation, boost foreign direct investment, and safeguard energy independence.',
+    content: 'Nigeria\'s National Assembly has overwhelmingly voted to tighten government fiscal benchmarks, setting mandatory debt-to-GDP corridors and prioritizing sovereign revenue stability. Financial analysts in Lagos praise the conservative monetary discipline, citing improved international investor confidence and enhanced currency stability for the Naira.',
+    image: 'https://images.unsplash.com/photo-1572949645841-094f3a9c4c94?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-25',
     readTime: '3 min'
   },
   {
     id: 'p3',
     category: 'Politics',
-    title: 'Economic Reform Bill Passes Senate',
-    excerpt: 'The new bill aims to simplify the tax code and provide more support for small businesses and startups.',
-    content: 'After weeks of intense debate, the Economic Revitalization Act has passed the Senate with a narrow margin. The bill introduces significant changes to corporate tax structures while offering tax credits for companies that invest in domestic manufacturing and employee training programs.',
-    image: 'https://picsum.photos/seed/politics3/800/450',
-    date: '2026-05-08',
+    title: 'East Africa Trade Accord Eliminates Tariff Barriers Across EAC Member States',
+    excerpt: 'Nairobi and Dar es Salaam establish frictionless commercial corridors, championing cross-border entrepreneurship and free trade.',
+    content: 'Leaders from the East African Community (EAC) gathered in Nairobi to ratify a historic free-trade expansion that eliminates non-tariff barriers and slashes export duties. The agreement empowers local agricultural producers, logistics enterprises, and manufacturing hubs to trade seamlessly across East Africa without administrative overreach.',
+    image: 'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-24',
     readTime: '5 min'
   },
   {
     id: 'p4',
     category: 'Politics',
-    title: 'Diplomatic Mission to Mars Announced',
-    excerpt: 'A coalition of space agencies is planning the first-ever diplomatic meeting to be held on the Red Planet.',
-    content: 'In an unprecedented move, space agencies from five continents have announced a joint mission to Mars. While primarily scientific, the mission will include a symbolic diplomatic session to discuss the future of space governance and resource sharing among nations.',
-    image: 'https://picsum.photos/seed/politics4/800/450',
-    date: '2026-05-07',
-    readTime: '6 min'
+    title: 'Ghana Reaffirms Constitutional Safeguards and Private Property Protection',
+    excerpt: 'Accra passes property rights protection bill to assure domestic and international investors against regulatory expropriation.',
+    content: 'Ghana\'s parliament has enacted the Sovereign Property Guarantee Act, establishing unassailable legal protections for corporate real estate, intellectual property, and industrial assets. The measure has been lauded by business chambers across West Africa as a gold standard for rule of law and constitutional clarity.',
+    image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-23',
+    readTime: '4 min'
   },
   {
     id: 'p5',
     category: 'Politics',
-    title: 'Education Funding Reaches Record High',
-    excerpt: 'The government has pledged an additional $20 billion to improve public schools and teacher salaries.',
-    content: 'A new education initiative has been unveiled, promising the largest single investment in public schooling in the country\'s history. The funds will be used to modernize classrooms, expand STEM programs, and significantly increase teacher pay across all states.',
-    image: 'https://picsum.photos/seed/politics5/800/450',
-    date: '2026-05-06',
+    title: 'African Continental Free Trade Area Reports Record Commercial Volume',
+    excerpt: 'Intra-African trade surges by 32% year-on-year as private enterprise drives continental economic integration.',
+    content: 'New trade metrics published by the AfCFTA Secretariat confirm that intra-African commercial exchange reached unprecedented heights this quarter. Driven by tariff reductions and private logistics networks, goods are moving faster between Southern Africa, West Africa, and North Africa.',
+    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-22',
     readTime: '4 min'
   },
 
-  // Football
+  // Business - African Capitalism & Enterprise
+  {
+    id: 'b1',
+    category: 'Business',
+    title: 'Johannesburg Stock Exchange Gains Momentum as Mining & Banking Stocks Rally',
+    excerpt: 'JSE All-Share Index hits multi-year high on strong earnings reports and private energy expansion.',
+    content: 'Equities on the Johannesburg Stock Exchange recorded substantial gains today, led by robust performance in platinum mining, commercial banking, and private telecommunications giants. Market strategists attribute the bullish sentiment to sound corporate governance and expanding export demand across African emerging markets.',
+    image: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-26',
+    readTime: '4 min'
+  },
+  {
+    id: 'b2',
+    category: 'Business',
+    title: 'Lagos Financial Centre Attracts $4.2B in Private Equity Infrastructure Capital',
+    excerpt: 'Independent energy producers and port developers lead Nigeria\'s industrial modernization wave.',
+    content: 'Commercial investment in Nigeria\'s industrial hubs received a major boost as private equity consortiums finalized $4.2 billion in funding for deepwater seaport facilities and gas-to-power generation plants. The capital injection is set to enhance manufacturing output and reduce logistics overheads nationwide.',
+    image: 'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-25',
+    readTime: '3 min'
+  },
+  {
+    id: 'b3',
+    category: 'Business',
+    title: 'Kenya Commercial Tea & Coffee Exports Reach Global Premium Benchmark',
+    excerpt: 'Agricultural entrepreneurs leverage direct trade models to boost revenue for smallholder farmers.',
+    content: 'Kenya\'s specialty tea and coffee sector has achieved record export margins across European and North American markets. Direct trade platforms have eliminated unnecessary broker fees, ensuring local farmers retain maximum commercial value from their high-quality yields.',
+    image: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-24',
+    readTime: '4 min'
+  },
+
+  // Football - CAF, PSL, NPFL & African Stars
   {
     id: 'f1',
     category: 'Football',
-    title: 'Underdogs Win the Champions Cup',
-    excerpt: 'In a stunning upset, the league newcomers have defeated the reigning champions in a thrilling final match.',
-    content: 'The football world is in disbelief after FC United, a team that was in the second division just three years ago, lifted the Champions Cup. A last-minute goal from their 19-year-old striker sealed a 2-1 victory against the giants of the sport.',
-    image: 'https://picsum.photos/seed/football1/800/450',
-    date: '2026-05-10',
+    title: 'CAF Champions League Final Set for Thrilling Clash in Cairo',
+    excerpt: 'North African powerhouses prepare for high-stakes clash as Mamelodi Sundowns and Al Ahly eye continental glory.',
+    content: 'Anticipation reaches fever pitch across the continent as the CAF Champions League final approaches. Tactical analysts highlight the showdown between South Africa\'s tactical masterminds and Cairo\'s decorated giants as a landmark showcase of elite African football talent and sporting excellence.',
+    image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-26',
     readTime: '3 min'
   },
   {
     id: 'f2',
     category: 'Football',
-    title: 'Transfer Window: Top Striker Moves for Record Fee',
-    excerpt: 'The most sought-after player in Europe has finally made his move to the Premier League for $150 million.',
-    content: 'The transfer saga of the summer has concluded with Marco Rossi signing a five-year deal with London City. The $150 million fee sets a new world record, reflecting the immense talent and potential of the 22-year-old Italian forward.',
-    image: 'https://picsum.photos/seed/football2/800/450',
-    date: '2026-05-09',
-    readTime: '2 min'
+    title: 'Victor Osimhen & Mohamed Salah Lead African Goalscoring Charts in Europe',
+    excerpt: 'African superstars continue dominant form across Premier League and Serie A fixtures.',
+    content: 'African international forwards continue to make headlines across world football. With lethal clinical finishing and work ethic, top African strikers are breaking European club records while inspiring millions of young players across academies in Lagos, Dakar, and Accra.',
+    image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-25',
+    readTime: '3 min'
   },
   {
     id: 'f3',
     category: 'Football',
-    title: 'New Stadium Technology Enhances Fan Experience',
-    excerpt: 'Smart seats and holographic replays are coming to the national stadium next season.',
-    content: 'The National Arena is undergoing a massive technological upgrade. Fans will soon enjoy "Smart Seats" with built-in charging ports and touchscreens for ordering food, as well as holographic replays that can be viewed from any angle in the stadium.',
-    image: 'https://picsum.photos/seed/football3/800/450',
-    date: '2026-05-08',
+    title: 'DStv Premiership & NPFL Modernize Youth Academies with Private Investment',
+    excerpt: 'South African and Nigerian clubs partner with international sports academies to nurture indigenous talent.',
+    content: 'Domestic football leagues in South Africa and Nigeria are experiencing an unprecedented resurgence following targeted private investment in training technology, stadium safety, and youth development infrastructure.',
+    image: 'https://images.unsplash.com/photo-1518091043644-c1d4457512c6?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-24',
     readTime: '4 min'
   },
-  {
-    id: 'f4',
-    category: 'Football',
-    title: 'Legendary Coach Announces Retirement',
-    excerpt: 'After 30 years and 15 major trophies, the most successful manager in history is stepping down.',
-    content: 'Sir Alex Thompson has announced that he will retire at the end of the current season. His career has spanned three decades, during which he transformed a struggling club into a global powerhouse, winning numerous league titles and international cups.',
-    image: 'https://picsum.photos/seed/football4/800/450',
-    date: '2026-05-07',
-    readTime: '5 min'
-  },
-  {
-    id: 'f5',
-    category: 'Football',
-    title: 'Women\'s World Cup Viewership Breaks Records',
-    excerpt: 'The latest tournament has seen a 40% increase in global audience compared to the previous edition.',
-    content: 'The growth of women\'s football continues to accelerate, with the recent World Cup drawing record-breaking crowds and TV audiences. FIFA reports that over 2 billion people tuned in to watch the tournament, highlighting the rising popularity of the women\'s game.',
-    image: 'https://picsum.photos/seed/football5/800/450',
-    date: '2026-05-06',
-    readTime: '3 min'
-  },
 
-  // Entertainment
+  // Entertainment - African Culture, Nollywood & Afrobeats
   {
     id: 'e1',
     category: 'Entertainment',
-    title: 'Pop Star Surprise Album Drops Tonight',
-    excerpt: 'The world\'s biggest music icon has just announced a new album will be available at midnight.',
-    content: 'Fans are in a frenzy after Luna Star posted a cryptic message on social media, revealing that her sixth studio album, "Midnight Echoes," will be released tonight. The album is said to feature collaborations with several top producers and a new experimental sound.',
-    image: 'https://picsum.photos/seed/entertainment1/800/450',
-    date: '2026-05-10',
+    title: 'Afrobeats & Amapiano Dominate Global Streaming Charts in Record Breakthrough',
+    excerpt: 'Lagos and Johannesburg music creators achieve multi-platinum milestones across global arenas.',
+    content: 'African musical genres have cemented their status as dominant forces in international culture. From sold-out stadium tours in London and New York to billions of digital streams, African artists are celebrating cultural pride and economic sovereignty through world-class creative production.',
+    image: 'https://images.unsplash.com/photo-1499364615650-ec38552f4f34?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-26',
     readTime: '2 min'
   },
   {
     id: 'e2',
     category: 'Entertainment',
-    title: 'Film Festival Winners Announced',
-    excerpt: 'A low-budget indie drama has taken home the top prize at this year\'s prestigious film festival.',
-    content: 'The jury at the Silver Screen Film Festival has awarded the "Golden Palm" to "The Quiet Room," a moving story about family and forgiveness. The film, shot entirely on a mobile phone, beat out several big-budget blockbusters for the top honor.',
-    image: 'https://picsum.photos/seed/entertainment2/800/450',
-    date: '2026-05-09',
-    readTime: '4 min'
-  },
-  {
-    id: 'e3',
-    category: 'Entertainment',
-    title: 'New Virtual Reality Theme Park Opens',
-    excerpt: 'Visitors can now step into their favorite movies in a fully immersive VR experience.',
-    content: 'The world\'s first fully virtual theme park, "DreamWorld VR," has opened its doors. Using advanced haptic suits and high-resolution headsets, visitors can fly through space, explore ancient ruins, or battle dragons in a safe and incredibly realistic environment.',
-    image: 'https://picsum.photos/seed/entertainment3/800/450',
-    date: '2026-05-08',
-    readTime: '3 min'
-  },
-  {
-    id: 'e4',
-    category: 'Entertainment',
-    title: 'Broadway Show to be Streamed Globally',
-    excerpt: 'For the first time, a hit musical will be broadcast live to audiences around the world.',
-    content: 'In a move to make theater more accessible, the producers of "Neon Nights" have announced a global streaming event. Fans who can\'t make it to New York will be able to watch a live performance from the comfort of their homes for a small fee.',
-    image: 'https://picsum.photos/seed/entertainment4/800/450',
-    date: '2026-05-07',
-    readTime: '2 min'
-  },
-  {
-    id: 'e5',
-    category: 'Entertainment',
-    title: 'Celebrity Chef Launches Sustainable Food App',
-    excerpt: 'The app helps users find local, seasonal ingredients and provides easy-to-follow recipes.',
-    content: 'Renowned chef Gordon Miller has launched "GreenPlate," an app dedicated to sustainable cooking. The platform connects users with local farmers and provides a database of recipes that minimize food waste and use environmentally friendly ingredients.',
-    image: 'https://picsum.photos/seed/entertainment5/800/450',
-    date: '2026-05-06',
+    title: 'Nollywood Box Office Records Broken by High-Budget Historical Epic',
+    excerpt: 'Nigerian film producers achieve $10M international theatrical distribution deal.',
+    content: 'Nollywood cinema continues its rapid evolution with the release of a blockbuster historical epic detailing West Africa\'s rich heritage. Produced with cutting-edge visual technology and independent African capital, the film has secured worldwide cinematic release rights.',
+    image: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-25',
     readTime: '3 min'
   },
 
-  // Technology
+  // Technology - African Innovation & Sovereign Tech
   {
     id: 't1',
     category: 'Technology',
-    title: 'AI Assistant Now Understands Emotions',
-    excerpt: 'A new update allows AI to detect and respond to the user\'s emotional state through voice analysis.',
-    content: 'Tech giant OmniCorp has released a groundbreaking update for its AI assistant, "Aura." The new version uses advanced machine learning to analyze vocal tones and patterns, allowing it to provide more empathetic and context-aware responses to users.',
-    image: 'https://picsum.photos/seed/tech1/800/450',
-    date: '2026-05-10',
+    title: 'Pan-African Fintech Ecosystem Surpasses $6B in Sovereign Cross-Border Payments',
+    excerpt: 'African software engineers build independent settlement networks to streamline trade across the continent.',
+    content: 'Fintech founders in Lagos, Nairobi, and Cape Town have achieved a historic breakthrough with the launch of frictionless digital payment rails that operate without reliance on costly foreign banking intermediaries. The technology drastically lowers transactional costs for African small business owners.',
+    image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-26',
     readTime: '4 min'
   },
   {
     id: 't2',
     category: 'Technology',
-    title: 'Quantum Computer Reaches New Milestone',
-    excerpt: 'Scientists have successfully performed a calculation that would take a supercomputer 10,000 years.',
-    content: 'Researchers at the Quantum Institute have achieved "quantum supremacy" with their latest 100-qubit processor. The machine solved a complex mathematical problem in just 200 seconds, demonstrating the immense potential of quantum computing for cryptography and drug discovery.',
-    image: 'https://picsum.photos/seed/tech2/800/450',
-    date: '2026-05-09',
-    readTime: '5 min'
-  },
-  {
-    id: 't3',
-    category: 'Technology',
-    title: 'Smartphone Battery That Lasts a Week',
-    excerpt: 'A new graphene-based battery technology promises to revolutionize mobile device usage.',
-    content: 'A startup called VoltX has unveiled a prototype smartphone battery that can last for seven days on a single charge. The battery uses graphene layers to increase energy density and can be fully charged in less than 15 minutes.',
-    image: 'https://picsum.photos/seed/tech3/800/450',
-    date: '2026-05-08',
-    readTime: '3 min'
-  },
-  {
-    id: 't4',
-    category: 'Technology',
-    title: 'Self-Driving Taxis Launch in Major City',
-    excerpt: 'A fleet of autonomous vehicles is now available for public use in the downtown area.',
-    content: 'The city of San Francisco has become the first to allow a fully autonomous taxi service to operate 24/7. Passengers can hail a car using an app, and the vehicles navigate the busy city streets without any human intervention.',
-    image: 'https://picsum.photos/seed/tech4/800/450',
-    date: '2026-05-07',
+    title: 'African Satellite Network Launches High-Speed Fiber Mesh in Sub-Saharan Region',
+    excerpt: 'Private space technology ventures expand gigabit broadband access across rural farming communities.',
+    content: 'A consortium of African aerospace engineers and private telecommunications providers has successfully brought online a low-Earth orbit satellite network tailored specifically for sub-Saharan connectivity. The system delivers high-speed internet to agricultural hubs, schools, and medical facilities.',
+    image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=2000&auto=format&fit=crop',
+    date: '2026-07-25',
     readTime: '4 min'
-  },
-  {
-    id: 't5',
-    category: 'Technology',
-    title: 'New Security Protocol to End Passwords',
-    excerpt: 'Major tech companies are joining forces to implement a more secure, biometric-based login system.',
-    content: 'The FIDO Alliance, which includes Apple, Google, and Microsoft, has announced a new standard called "Passkeys." This technology aims to replace traditional passwords with biometric authentication, making online accounts much harder to hack.',
-    image: 'https://picsum.photos/seed/tech5/800/450',
-    date: '2026-05-06',
-    readTime: '3 min'
   }
 ];
 
 export const thingsToKnow = [
   {
     id: 'k1',
-    category: 'Knowledge',
-    title: 'The Speed of Light',
-    tip: 'Light travels at approximately 299,792,458 meters per second in a vacuum.',
-    description: 'This fundamental constant of nature is the maximum speed at which all conventional matter and information in the universe can travel.',
-    date: '2026-05-10'
+    category: 'African History',
+    title: 'The Great Kingdom of Mapungubwe',
+    tip: 'Southern Africa\'s ancient trading empire pioneered gold metalworking and complex urban trade as early as 1075 CE.',
+    description: 'Located at the confluence of the Shashe and Limpopo rivers in South Africa, Mapungubwe was a thriving indigenous kingdom with sophisticated international trade networks spanning Africa and Asia.',
+    date: '2026-07-26'
   },
   {
     id: 'k2',
-    category: 'History',
-    title: 'The Great Pyramid',
-    tip: 'The Great Pyramid of Giza was the tallest man-made structure for over 3,800 years.',
-    description: 'Constructed around 2560 BCE, it is the oldest of the Seven Wonders of the Ancient World and the only one to remain largely intact.',
-    date: '2026-05-09'
+    category: 'African Innovation',
+    title: 'Mobile Banking Revolution',
+    tip: 'Kenya launched M-Pesa in 2007, pioneering global peer-to-peer mobile payments long before Silicon Valley.',
+    description: 'Africa leads the world in mobile money adoption, with over 700 million registered accounts generating hundreds of billions in annual transaction volume.',
+    date: '2026-07-25'
   },
   {
     id: 'k3',
-    category: 'Science',
-    title: 'The Human Brain',
-    tip: 'Your brain generates enough electricity to power a small light bulb.',
-    description: 'While you are awake, your brain produces between 12 and 25 watts of electricity – enough to light a small LED bulb!',
-    date: '2026-05-08'
-  },
-  {
-    id: 'k4',
-    category: 'Geography',
-    title: 'Mount Everest Growth',
-    tip: 'Mount Everest grows about 4 millimeters taller every year.',
-    description: 'Due to the collision of the Indian and Eurasian tectonic plates, the Himalayas are still rising today.',
-    date: '2026-05-07'
-  },
-  {
-    id: 'k5',
-    category: 'Oceanography',
-    title: 'The Mariana Trench',
-    tip: 'The deepest part of the ocean is deeper than Mount Everest is tall.',
-    description: 'The Challenger Deep in the Mariana Trench reaches a depth of about 10,935 meters (35,876 feet).',
-    date: '2026-05-06'
+    category: 'Free Trade',
+    title: 'The AfCFTA Agreement',
+    tip: 'The African Continental Free Trade Area covers 1.3 billion people and creates the largest single free-trade market in the world by country count.',
+    description: 'AfCFTA aims to boost intra-African trade by removing tariffs on 90% of goods and promoting cross-border industrial development.',
+    date: '2026-07-24'
   }
 ];
 
 export const dailyHappenings = [
   {
-    date: 'May 10',
+    date: 'July 26',
     events: [
-      '1994: Nelson Mandela is inaugurated as South Africa\'s first black president.',
-      '1869: The First Transcontinental Railroad is completed in the United States.',
-      '1940: Winston Churchill becomes Prime Minister of the United Kingdom.'
+      '1994: Nelson Mandela addresses the OAU summit, championing African unity and economic sovereignty.',
+      '1960: West African states celebrate independence milestones and economic self-determination.',
+      '2021: The African Continental Free Trade Area accelerates digital payment interoperability across 54 member states.'
     ]
   }
 ];
 
 export const dailyQuotes = [
   {
-    quote: "The only way to do great work is to love what you do.",
-    author: "Steve Jobs"
+    quote: "Africa is not a problem to be solved; it is a power to be unleashed through enterprise and courage.",
+    author: "African Free Market Forum"
   },
   {
-    quote: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
-    author: "Winston Churchill"
+    quote: "Courage, discipline, and hard work are the true foundations of national prosperity.",
+    author: "Nelson Mandela"
   }
 ];
-
