@@ -32,10 +32,38 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
 import { 
+  newsData,
   thingsToKnow, 
   dailyHappenings, 
   dailyQuotes 
 } from './data.js';
+
+// Central article selector ensuring African newsData baseline is always available
+function getAllArticles() {
+  const dbNews = state.news || [];
+  const autoNews = state.autoNews || [];
+  
+  const allMap = new Map();
+  
+  // 1. Add autoNews (live RSS feeds)
+  autoNews.forEach(item => {
+    if (item && item.id) allMap.set(item.id, item);
+  });
+  
+  // 2. Add dbNews (Firestore custom articles)
+  dbNews.forEach(item => {
+    if (item && item.id) allMap.set(item.id, item);
+  });
+  
+  // 3. Add default newsData from data.js as baseline items so feeds are never empty
+  newsData.forEach(item => {
+    if (item && item.id && !allMap.has(item.id)) {
+      allMap.set(item.id, item);
+    }
+  });
+
+  return Array.from(allMap.values());
+}
 
 // Analytics Initialization
 window.dataLayer = window.dataLayer || [];
@@ -60,7 +88,20 @@ const state = {
   comments: {},
   currentRoute: window.location.pathname === '/' ? '/home' : window.location.pathname,
   viewMode: localStorage.getItem('viewMode') || 'grid',
-  autoNews: JSON.parse(localStorage.getItem('autoNewsCache')) || [],
+  autoNews: (() => {
+    const rawCache = JSON.parse(localStorage.getItem('autoNewsCache')) || [];
+    const isLegacyOrUS = (item) => {
+      const text = `${item.source || ''} ${item.id || ''} ${item.title || ''} ${item.author || ''} ${item.content || ''}`.toLowerCase();
+      return text.includes('foxnews') || text.includes('breitbart') || text.includes('washingtontimes') || 
+             text.includes('washingtonexaminer') || text.includes('nypost') || text.includes('dailywire') || 
+             text.includes('skysports') || text.includes('sportsmole') || text.includes('biden') || 
+             text.includes('trump') || text.includes('republican') || text.includes('democrat') || 
+             text.includes('us politics') || text.includes('white house') || text.includes('epl') || text.includes('nba');
+    };
+    const cleaned = rawCache.filter(item => !isLegacyOrUS(item));
+    localStorage.setItem('autoNewsCache', JSON.stringify(cleaned));
+    return cleaned;
+  })(),
   notifications: JSON.parse(localStorage.getItem('gonow_notifications')) || [],
   currentFeedTab: 'recently-published'
 };
@@ -177,34 +218,94 @@ function generateFullOriginalArticle(item, category) {
   return [section1, section2, section3, section4].join('\n\n');
 }
 
+// Resilient Multi-Tier RSS Fetcher
+async function fetchRSSFeedItems(url) {
+  // Tier 1: rss2json API
+  try {
+    const cacheBuster = Date.now();
+    const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&t=${cacheBuster}`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.status === 'ok' && data.items && data.items.length > 0) {
+        return data.items.map(item => ({
+          title: item.title,
+          description: item.description || item.content || '',
+          content: item.content || item.description || '',
+          link: item.link || item.guid || url,
+          pubDate: item.pubDate || new Date().toISOString(),
+          thumbnail: item.thumbnail || item.enclosure?.link || ''
+        }));
+      }
+    }
+  } catch (e) {
+    // console.warn('rss2json failed:', url);
+  }
+
+  // Tier 2: AllOrigins Proxy + Client DOMParser
+  try {
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&t=${Date.now()}`;
+    const response = await fetch(proxyUrl);
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.contents) {
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(data.contents, 'text/xml');
+        const items = Array.from(xml.querySelectorAll('item, entry'));
+        if (items.length > 0) {
+          return items.slice(0, 15).map(item => {
+            const title = item.querySelector('title')?.textContent || 'African News Report';
+            const desc = item.querySelector('description, summary, content')?.textContent || '';
+            const link = item.querySelector('link')?.getAttribute('href') || item.querySelector('link')?.textContent || url;
+            const pubDate = item.querySelector('pubDate, published, updated')?.textContent || new Date().toISOString();
+            const enclosure = item.querySelector('enclosure')?.getAttribute('url') || item.querySelector('media\\:content')?.getAttribute('url') || '';
+            return {
+              title: title.trim(),
+              description: desc.trim(),
+              content: desc.trim(),
+              link: link.trim(),
+              pubDate: pubDate.trim(),
+              thumbnail: enclosure
+            };
+          });
+        }
+      }
+    }
+  } catch (e) {
+    // console.warn('Allorigins proxy failed:', url);
+  }
+
+  return [];
+}
+
 // Initialize
 async function syncAllNews() {
   const categoryConfigs = {
     'Politics': [
       'https://www.politicsweb.co.za/news-and-analysis/rss',
+      'https://feeds.news24.com/articles/news24/SouthAfrica/rss',
+      'https://feeds.news24.com/articles/news24/Africa/rss',
       'https://www.vanguardngr.com/category/national-news/feed/',
       'https://punchng.com/topics/news/feed/',
       'https://thenationonlineng.net/feed/',
       'https://dailypost.ng/politics/feed/',
-      'https://feeds.news24.com/articles/news24/SouthAfrica/rss',
-      'https://feeds.news24.com/articles/news24/Africa/rss',
+      'https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf',
       'https://www.the-star.co.ke/rss/',
       'https://citinewsroom.com/feed/'
     ],
     'Business': [
       'https://businessday.ng/feed/',
       'https://www.moneyweb.co.za/feed/',
+      'https://www.businesslive.co.za/rss/',
       'https://www.cnbcafrica.com/feed/',
       'https://nairametrics.com/feed/',
-      'https://venturasafrica.com/feed/',
-      'https://www.businesslive.co.za/rss/'
+      'https://allafrica.com/tools/headlines/rdf/business/headlines.rdf'
     ],
     'Football': [
       'https://www.kickoff.com/rss',
       'https://www.soccerladuma.co.za/rss',
-      'https://www.sportsmole.co.uk/football/africa/index.rss',
       'https://www.vanguardngr.com/category/sports/feed/',
-      'https://punchng.com/topics/sports/feed/'
+      'https://punchng.com/topics/sports/feed/',
+      'https://allafrica.com/tools/headlines/rdf/sport/headlines.rdf'
     ],
     'Entertainment': [
       'https://punchng.com/topics/entertainment/feed/',
@@ -227,24 +328,20 @@ async function syncAllNews() {
   for (const [name, urls] of Object.entries(categoryConfigs)) {
     let categoryNews = [];
     for (const url of urls) {
-      if (categoryNews.length >= 100) break; // Increase pool size for pagination
+      if (categoryNews.length >= 100) break;
       try {
-        const cacheBuster = Date.now();
-        const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&t=${cacheBuster}`);
-        const data = await response.json();
-        if (data.status === 'ok' && data.items && data.items.length > 0) {
-          const items = data.items.map((item) => {
+        const rawItems = await fetchRSSFeedItems(url);
+        if (rawItems && rawItems.length > 0) {
+          const items = rawItems.map((item) => {
             const pubDate = new Date(item.pubDate);
-            const formattedDate = pubDate.toLocaleDateString('en-US', { 
-              month: 'long', 
-              day: 'numeric', 
-              year: 'numeric' 
-            });
+            const formattedDate = isNaN(pubDate.getTime()) 
+              ? new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+              : pubDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
             const stableId = `auto-${name.toLowerCase()}-${hashString(item.title)}`;
             const cleanExcerptText = item.description 
               ? item.description.replace(/<[^>]*>?/gm, '').replace(/\[\+\]|\(.*?\)|read more on.*|click here to.*|http\S+/gi, '').trim()
-              : `${item.title} — Comprehensive coverage and verified insights from GoNow Africa News.`;
+              : `${item.title} — Verified report from GoNow Africa News.`;
 
             const excerpt = cleanExcerptText.substring(0, 220) + (cleanExcerptText.length > 220 ? '...' : '');
             const synthesizedContent = generateFullOriginalArticle(item, name);
@@ -257,7 +354,7 @@ async function syncAllNews() {
               image: extractImage(item, name),
               category: name,
               date: formattedDate,
-              timestamp: pubDate.getTime(),
+              timestamp: isNaN(pubDate.getTime()) ? Date.now() : pubDate.getTime(),
               readTime: `${Math.floor(Math.random() * 3) + 4} min read`,
               author: `GoNow Africa ${name} Bureau`,
               isAuto: true,
@@ -274,7 +371,7 @@ async function syncAllNews() {
     const uniqueNews = [];
     const titles = new Set();
     categoryNews.forEach(item => {
-      if (!titles.has(item.title.toLowerCase())) {
+      if (item && item.title && !titles.has(item.title.toLowerCase())) {
         titles.add(item.title.toLowerCase());
         uniqueNews.push(item);
       }
@@ -287,8 +384,9 @@ async function syncAllNews() {
     allFreshAutoNews.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     state.autoNews = allFreshAutoNews;
     localStorage.setItem('autoNewsCache', JSON.stringify(allFreshAutoNews));
-    state.newsLoaded = true;
   }
+  
+  state.newsLoaded = true;
   
   if (pathRoutes.includes(state.currentRoute) || state.currentRoute.startsWith('/article/')) {
     renderPage(state.currentRoute);
@@ -836,31 +934,43 @@ async function fetchWikipediaEvents() {
 
 async function fetchFinanceData() {
   try {
-    // Yahoo Finance CORS friendly alternative or specific public endpoint
-    // Using a reliable public market data API as a proxy for Yahoo Finance intent
-    const symbols = ['^GSPC', '^DJI', '^IXIC', 'AAPL', 'TSLA', 'AMZN'];
-    const tickerPromises = symbols.map(async symbol => {
-      try {
-        const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`);
-        const data = await res.json();
-        const meta = data.chart.result[0].meta;
-        const price = meta.regularMarketPrice;
-        const prevClose = meta.previousClose;
-        const change = ((price - prevClose) / prevClose * 100).toFixed(2);
-        return { symbol: symbol.replace('^', ''), price: price.toFixed(2), change: change };
-      } catch (e) {
-        // If Yahoo Finance CORS blocks, fallback to a mock for demo that looks like Yahoo Finance data
-        // (In a real production environment, a backend proxy would be used)
-        const mockPrices = { 'GSPC': 5100, 'DJI': 39000, 'IXIC': 16000, 'AAPL': 170, 'TSLA': 160, 'AMZN': 180 };
-        return { symbol: symbol.replace('^', ''), price: (mockPrices[symbol.replace('^', '')] || 100).toFixed(2), change: (Math.random() * 2 - 1).toFixed(2) };
-      }
-    });
+    const fxResponse = await fetch('https://open.er-api.com/v6/latest/USD');
+    const fxData = await fxResponse.json();
+    
+    let zarRate = 18.25;
+    let ngnRate = 1520.00;
+    let kesRate = 129.50;
+    let egpRate = 48.30;
 
-    state.financeData = await Promise.all(tickerPromises);
-    console.log('Finance data loaded:', state.financeData.length);
+    if (fxData && fxData.rates) {
+      zarRate = fxData.rates.ZAR || zarRate;
+      ngnRate = fxData.rates.NGN || ngnRate;
+      kesRate = fxData.rates.KES || kesRate;
+      egpRate = fxData.rates.EGP || egpRate;
+    }
+
+    state.financeData = [
+      { symbol: 'USD/ZAR', price: zarRate.toFixed(2), change: '-0.35' },
+      { symbol: 'USD/NGN', price: ngnRate.toFixed(2), change: '+0.12' },
+      { symbol: 'USD/KES', price: kesRate.toFixed(2), change: '-0.08' },
+      { symbol: 'JSE Top40', price: '76,420', change: '+0.85' },
+      { symbol: 'NGX All-Share', price: '100,240', change: '+0.42' },
+      { symbol: 'Brent Oil', price: '$82.40', change: '+1.15' },
+      { symbol: 'Gold (Oz)', price: '$2,385', change: '+0.60' }
+    ];
+    console.log('African Finance data loaded:', state.financeData.length);
     handleRoute();
   } catch (error) {
     console.error('Error fetching finance data:', error);
+    state.financeData = [
+      { symbol: 'USD/ZAR', price: '18.25', change: '-0.35' },
+      { symbol: 'USD/NGN', price: '1520.00', change: '+0.12' },
+      { symbol: 'USD/KES', price: '129.50', change: '-0.08' },
+      { symbol: 'JSE Top40', price: '76,420', change: '+0.85' },
+      { symbol: 'NGX All-Share', price: '100,240', change: '+0.42' },
+      { symbol: 'Brent Oil', price: '$82.40', change: '+1.15' },
+      { symbol: 'Gold (Oz)', price: '$2,385', change: '+0.60' }
+    ];
   }
 }
 
@@ -1011,12 +1121,12 @@ function renderPage(path) {
   const container = document.createElement('div');
   container.className = 'container fade-in';
 
-  let pageTitle = 'GoNow — News, Tech & Football Today';
-  let pageDescription = 'GoNow — your daily dose of news, football scores, tech, and entertainment. Fast, clean, ad-light.';
+  let pageTitle = 'GoNow | African News, Markets & Football';
+  let pageDescription = 'GoNow — premier African news portal. Verified breaking updates in African politics, business, CAF/PSL/NPFL football, tech, and culture.';
   let pageImage = 'https://images.unsplash.com/photo-1585829365234-781fcd50c45b?q=80&w=1200&h=630&auto=format&fit=crop';
   let pageType = 'website';
 
-  const allArticles = [...state.news, ...state.autoNews];
+  const allArticles = getAllArticles();
 
   if (path === '/home') {
     renderHome(container);
@@ -1097,7 +1207,7 @@ function renderPage(path) {
       renderHome(container);
       // Retrying in case RSS news is still syncing in background
       setTimeout(() => {
-        const freshArticles = [...state.news, ...state.autoNews];
+        const freshArticles = getAllArticles();
         const retryArticle = freshArticles.find(n => n.id === id);
         if (retryArticle) {
           openDetail(id, 'news');
@@ -1234,7 +1344,7 @@ function renderTerms(container) {
 }
 
 function getBreakingNewsTicker() {
-  const allNews = [...state.autoNews, ...state.news];
+  const allNews = getAllArticles();
   if (allNews.length === 0) return '';
   
   allNews.sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
@@ -1262,9 +1372,9 @@ async function initWeatherWidget() {
   const sidebarContainer = document.getElementById('weather-sidebar-container');
   if (!headerContainer && !sidebarContainer) return;
 
-  let lat = 51.2194;
-  let lon = 4.4025;
-  let locationName = 'Antwerpen';
+  let lat = -26.2041;
+  let lon = 28.0473;
+  let locationName = 'Johannesburg 🇿🇦';
 
   const fetchWeather = async (latitude, longitude, name) => {
     try {
@@ -1296,7 +1406,7 @@ async function initWeatherWidget() {
         if (sidebarContainer) {
           sidebarContainer.innerHTML = `
             <div class="premium-sidebar-widget" style="display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center;">
-              <h3 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 0;">LOCAL CLIMATE</h3>
+              <h3 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 0;">REGIONAL CLIMATE</h3>
               <div style="font-size: 2.5rem; line-height: 1; margin: 10px 0;">${emoji}</div>
               <div style="font-size: 1.8rem; font-weight: 800; line-height: 1;">${temp}°C</div>
               <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">${name} reporting desk</div>
@@ -1319,7 +1429,7 @@ async function initWeatherWidget() {
       async () => {
         await fetchWeather(lat, lon, locationName);
       },
-      { timeout: 5000 }
+      { timeout: 3000 }
     );
   } else {
     await fetchWeather(lat, lon, locationName);
@@ -1606,7 +1716,7 @@ function renderHome(container) {
     'Technology': []
   };
 
-  const allSourceNews = [...state.autoNews];
+  const allSourceNews = getAllArticles();
   allSourceNews.forEach(article => {
     if (newsByCategory[article.category]) {
       newsByCategory[article.category].push(article);
@@ -1639,14 +1749,14 @@ function renderHome(container) {
       container.innerHTML = `
         <div style="text-align: center; padding: 100px 20px;">
           <div class="loader" style="margin: 0 auto 20px;"></div>
-          <h2 style="font-size: 1.5rem;">Connecting to GoNow Global News...</h2>
-          <p style="color: var(--text-muted);">Fetching conservative world-wide perspectives</p>
+          <h2 style="font-size: 1.5rem;">Connecting to GoNow African News Network...</h2>
+          <p style="color: var(--text-muted);">Fetching latest regional intelligence & reports</p>
         </div>
       `;
     } else {
       container.innerHTML = `
         <div style="text-align: center; padding: 100px 20px;">
-          <h1 style="font-size: 2rem;">Connecting to Global Feeds...</h1>
+          <h1 style="font-size: 2rem;">Connecting to GoNow Feeds...</h1>
           <p>Please wait a few seconds or check your connection.</p>
           <a href="/admin" class="submit-btn" style="display: inline-block; margin-top: 30px;">Publish First Article</a>
         </div>
@@ -1852,90 +1962,88 @@ function renderHome(container) {
 }
 
 const SPORTS_DATA = {
-  EPL: {
-    fullName: "English Premier League (EPL)",
+  CAF: {
+    fullName: "CAF Champions League & Continental Football (Africa)",
     leaguesInfo: {
-      founded: "1992",
+      founded: "1964",
+      teams: "16 Group Stage (54 Countries)",
+      country: "Pan-Africa 🌍",
+      champion: "Al Ahly / Mamelodi Sundowns",
+      description: "The CAF Champions League is the premier club football tournament in Africa, bringing together top national champions across South Africa, Nigeria, Egypt, Morocco, Ghana, and the entire continent."
+    },
+    tables: [
+      { pos: 1, team: "Mamelodi Sundowns (RSA)", pg: 6, w: 5, d: 1, l: 0, gd: "+11", pts: 16 },
+      { pos: 2, team: "Al Ahly SC (EGY)", pg: 6, w: 4, d: 2, l: 0, gd: "+8", pts: 14 },
+      { pos: 3, team: "Enyimba FC (NGA)", pg: 6, w: 3, d: 2, l: 1, gd: "+4", pts: 11 },
+      { pos: 4, team: "Raja Casablanca (MAR)", pg: 6, w: 3, d: 1, l: 2, gd: "+3", pts: 10 },
+      { pos: 5, team: "TP Mazembe (COD)", pg: 6, w: 2, d: 2, l: 2, gd: "0", pts: 8 },
+      { pos: 6, team: "Petro de Luanda (AGO)", pg: 6, w: 2, d: 1, l: 3, gd: "-1", pts: 7 },
+      { pos: 7, team: "Horoya AC (GIN)", pg: 6, w: 1, d: 1, l: 4, gd: "-5", pts: 4 }
+    ],
+    fixtures: [
+      { date: "Saturday, August 1", home: "Mamelodi Sundowns", away: "Al Ahly", time: "15:00 CAT", venue: "Loftus Versfeld, Pretoria" },
+      { date: "Saturday, August 1", home: "Enyimba FC", away: "Petro de Luanda", time: "16:00 WAT", venue: "Enyimba International, Aba" },
+      { date: "Sunday, August 2", home: "TP Mazembe", away: "Raja Casablanca", time: "15:00 CAT", venue: "Stade TP Mazembe, Lubumbashi" }
+    ],
+    results: [
+      { date: "July 20", home: "Al Ahly", away: "TP Mazembe", score: "2 - 0" },
+      { date: "July 19", home: "Petro de Luanda", away: "Mamelodi Sundowns", score: "1 - 2" },
+      { date: "July 18", home: "Raja Casablanca", away: "Enyimba FC", score: "1 - 1" }
+    ]
+  },
+  PSL: {
+    fullName: "South African Premier Soccer League (DStv Premiership)",
+    leaguesInfo: {
+      founded: "1996",
+      teams: "16",
+      country: "South Africa 🇿🇦",
+      champion: "Mamelodi Sundowns",
+      description: "The DStv Premiership is South Africa's top professional football division, showcasing elite African talent, tactical innovation, and fierce local rivalries."
+    },
+    tables: [
+      { pos: 1, team: "Mamelodi Sundowns", pg: 28, w: 22, d: 5, l: 1, gd: "+42", pts: 71 },
+      { pos: 2, team: "Orlando Pirates", pg: 28, w: 18, d: 5, l: 5, gd: "+22", pts: 59 },
+      { pos: 3, team: "Stellenbosch FC", pg: 28, w: 15, d: 9, l: 4, gd: "+16", pts: 54 },
+      { pos: 4, team: "Sekhukhune United", pg: 28, w: 12, d: 9, l: 7, gd: "+8", pts: 45 },
+      { pos: 5, team: "Kaizer Chiefs", pg: 28, w: 10, d: 9, l: 9, gd: "+1", pts: 39 },
+      { pos: 6, team: "SuperSport United", pg: 28, w: 9, d: 11, l: 8, gd: "0", pts: 38 },
+      { pos: 7, team: "Cape Town City", pg: 28, w: 10, d: 8, l: 10, gd: "-2", pts: 38 }
+    ],
+    fixtures: [
+      { date: "Saturday, August 8", home: "Kaizer Chiefs", away: "Orlando Pirates", time: "15:30 SAST", venue: "FNB Stadium, Johannesburg" },
+      { date: "Saturday, August 8", home: "Mamelodi Sundowns", away: "Stellenbosch FC", time: "18:00 SAST", venue: "Loftus Versfeld, Pretoria" },
+      { date: "Sunday, August 9", home: "Cape Town City", away: "SuperSport United", time: "15:00 SAST", venue: "DHL Stadium, Cape Town" }
+    ],
+    results: [
+      { date: "July 22", home: "Orlando Pirates", away: "Kaizer Chiefs", score: "2 - 1" },
+      { date: "July 21", home: "Stellenbosch FC", away: "Mamelodi Sundowns", score: "0 - 1" },
+      { date: "July 20", home: "Sekhukhune United", away: "Cape Town City", score: "1 - 0" }
+    ]
+  },
+  NPFL: {
+    fullName: "Nigeria Premier Football League (NPFL)",
+    leaguesInfo: {
+      founded: "1972",
       teams: "20",
-      country: "England 🏴\u00DB\u0092\u00DB\u0097\u00DB\u009c",
-      champion: "Manchester City",
-      description: "The English Premier League is the top tier of English football, known globally for its fast-paced action, high-stakes matches, and star-studded rosters."
+      country: "Nigeria 🇳🇬",
+      champion: "Enugu Rangers / Enyimba",
+      description: "The Nigeria Premier Football League is Nigeria's premier division, renowned for raw athleticism, passion, and generating international superstars."
     },
     tables: [
-      { pos: 1, team: "Liverpool", pg: 28, w: 20, d: 5, l: 3, gd: "+38", pts: 65 },
-      { pos: 2, team: "Manchester City", pg: 28, w: 19, d: 6, l: 3, gd: "+34", pts: 63 },
-      { pos: 3, team: "Arsenal", pg: 28, w: 18, d: 7, l: 3, gd: "+42", pts: 61 },
-      { pos: 4, team: "Aston Villa", pg: 28, w: 17, d: 4, l: 7, gd: "+18", pts: 55 },
-      { pos: 5, team: "Tottenham", pg: 27, w: 16, d: 5, l: 6, gd: "+17", pts: 53 },
-      { pos: 6, team: "Manchester United", pg: 28, w: 15, d: 2, l: 11, gd: "+5", pts: 47 },
-      { pos: 7, team: "Chelsea", pg: 27, w: 11, d: 7, l: 9, gd: "+11", pts: 40 }
+      { pos: 1, team: "Enugu Rangers", pg: 38, w: 21, d: 7, l: 10, gd: "+23", pts: 70 },
+      { pos: 2, team: "Remo Stars", pg: 38, w: 20, d: 5, l: 13, gd: "+18", pts: 65 },
+      { pos: 3, team: "Enyimba International", pg: 38, w: 19, d: 6, l: 13, gd: "+14", pts: 63 },
+      { pos: 4, team: "Shooting Stars (33)", pg: 38, w: 18, d: 8, l: 12, gd: "+11", pts: 62 },
+      { pos: 5, team: "Plateau United", pg: 38, w: 18, d: 4, l: 16, gd: "+9", pts: 58 },
+      { pos: 6, team: "Lobi Stars", pg: 38, w: 17, d: 7, l: 14, gd: "+4", pts: 58 }
     ],
     fixtures: [
-      { date: "Saturday, March 14", home: "Manchester City", away: "Liverpool", time: "12:30", venue: "Etihad Stadium" },
-      { date: "Saturday, March 14", home: "Arsenal", away: "Chelsea", time: "15:00", venue: "Emirates Stadium" },
-      { date: "Sunday, March 15", home: "Manchester United", away: "Tottenham", time: "16:30", venue: "Old Trafford" }
+      { date: "Saturday, August 8", home: "Enyimba International", away: "Enugu Rangers", time: "16:00 WAT", venue: "Enyimba Stadium, Aba" },
+      { date: "Sunday, August 9", home: "Remo Stars", away: "Shooting Stars", time: "16:00 WAT", venue: "Remo Stars Stadium, Ikenne" }
     ],
     results: [
-      { date: "Sunday, March 8", home: "Liverpool", away: "Manchester United", score: "2 - 1" },
-      { date: "Saturday, March 7", home: "Chelsea", away: "Newcastle", score: "3 - 0" },
-      { date: "Saturday, March 7", home: "Manchester City", away: "Aston Villa", score: "4 - 1" }
-    ]
-  },
-  NBA: {
-    fullName: "National Basketball Association (NBA)",
-    leaguesInfo: {
-      founded: "1946",
-      teams: "30",
-      country: "United States \u00DB\u00AA",
-      champion: "Boston Celtics",
-      description: "The NBA is the premier men's professional basketball league in the world, featuring 30 teams across North America competing for the Larry O'Brien Trophy."
-    },
-    tables: [
-      { pos: 1, team: "Boston Celtics", pg: 64, w: 50, d: 0, l: 14, gd: "+10.2", pts: 78.1 },
-      { pos: 2, team: "Milwaukee Bucks", pg: 65, w: 42, d: 0, l: 23, gd: "+4.8", pts: 64.6 },
-      { pos: 3, team: "Cleveland Cavaliers", pg: 64, w: 41, d: 0, l: 23, gd: "+3.5", pts: 64.1 },
-      { pos: 4, team: "New York Knicks", pg: 64, w: 37, d: 0, l: 27, gd: "+2.9", pts: 57.8 },
-      { pos: 5, team: "Orlando Magic", pg: 65, w: 37, d: 0, l: 28, gd: "+1.8", pts: 56.9 },
-      { pos: 6, team: "Philadelphia 76ers", pg: 63, w: 36, d: 0, l: 27, gd: "+1.2", pts: 57.1 }
-    ],
-    fixtures: [
-      { date: "Tonight", home: "Boston Celtics", away: "Golden State Warriors", time: "19:30 EST", venue: "TD Garden" },
-      { date: "Tonight", home: "Los Angeles Lakers", away: "Milwaukee Bucks", time: "22:00 EST", venue: "Crypto.com Arena" },
-      { date: "Tomorrow", home: "Miami Heat", away: "Dallas Mavericks", time: "20:00 EST", venue: "Kaseya Center" }
-    ],
-    results: [
-      { date: "Yesterday", home: "Golden State Warriors", away: "Milwaukee Bucks", score: "125 - 90" },
-      { date: "Yesterday", home: "Los Angeles Lakers", away: "Sacramento Kings", score: "120 - 130" },
-      { date: "Tuesday", home: "Brooklyn Nets", away: "Philadelphia 76ers", score: "112 - 107" }
-    ]
-  },
-  F1: {
-    fullName: "Formula 1 (Motorsport World Championship)",
-    leaguesInfo: {
-      founded: "1950",
-      teams: "10 (20 Drivers)",
-      country: "Global \u00DB\u00AA",
-      champion: "Max Verstappen (Red Bull)",
-      description: "Formula 1 is the highest class of international racing for open-wheel single-seater formula racing cars sanctioned by the FIA."
-    },
-    tables: [
-      { pos: 1, team: "Max Verstappen (Red Bull)", pg: 2, w: 2, d: 0, l: 0, gd: "--", pts: 51 },
-      { pos: 2, team: "Sergio Perez (Red Bull)", pg: 2, w: 0, d: 0, l: 0, gd: "--", pts: 36 },
-      { pos: 3, team: "Charles Leclerc (Ferrari)", pg: 2, w: 0, d: 0, l: 0, gd: "--", pts: 28 },
-      { pos: 4, team: "George Russell (Mercedes)", pg: 2, w: 0, d: 0, l: 0, gd: "--", pts: 18 },
-      { pos: 5, team: "Oscar Piastri (McLaren)", pg: 2, w: 0, d: 0, l: 0, gd: "--", pts: 16 },
-      { pos: 6, team: "Carlos Sainz (Ferrari)", pg: 1, w: 0, d: 0, l: 0, gd: "--", pts: 15 },
-      { pos: 7, team: "Fernando Alonso (Aston Martin)", pg: 2, w: 0, d: 0, l: 0, gd: "--", pts: 12 }
-    ],
-    fixtures: [
-      { date: "March 22 - 24", home: "Australian Grand Prix", away: "Melbourne Albert Park", time: "05:00 UTC", venue: "Albert Park Circuit" },
-      { date: "April 5 - 7", home: "Japanese Grand Prix", away: "Suzuka Circuit", time: "05:00 UTC", venue: "Suzuka Circuit" },
-      { date: "April 19 - 21", home: "Chinese Grand Prix", away: "Shanghai International", time: "07:00 UTC", venue: "Shanghai Circuit" }
-    ],
-    results: [
-      { date: "March 9", home: "Saudi Arabian GP (Winner)", away: "Max Verstappen", score: "1:20:43" },
-      { date: "March 2", home: "Bahrain GP (Winner)", away: "Max Verstappen", score: "1:31:44" },
-      { date: "Abu Dhabi GP (2023)", home: "Yas Marina GP (Winner)", away: "Max Verstappen", score: "1:27:02" }
+      { date: "July 23", home: "Enugu Rangers", away: "Remo Stars", score: "2 - 0" },
+      { date: "July 22", home: "Shooting Stars", away: "Enyimba International", score: "1 - 0" }
     ]
   }
 };
@@ -1951,9 +2059,9 @@ window.selectSportsHubSection = (section) => {
 };
 
 export function renderFootballSportsHub() {
-  const selectedSport = state.sportsHubSport || 'EPL';
+  const selectedSport = state.sportsHubSport || 'CAF';
   const selectedSection = state.sportsHubSection || 'Tables';
-  const data = SPORTS_DATA[selectedSport];
+  const data = SPORTS_DATA[selectedSport] || SPORTS_DATA.CAF;
 
   let sectionContentHtml = '';
 
@@ -1989,9 +2097,9 @@ export function renderFootballSportsHub() {
               <th style="padding: 12px 16px;">Team / Competitor</th>
               <th style="padding: 12px 16px; text-align: center;">GP</th>
               <th style="padding: 12px 16px; text-align: center;">W</th>
-              <th style="padding: 12px 16px; text-align: center;">${selectedSport === 'F1' ? 'Podiums' : 'D'}</th>
+              <th style="padding: 12px 16px; text-align: center;">D</th>
               <th style="padding: 12px 16px; text-align: center;">L</th>
-              <th style="padding: 12px 16px; text-align: center;">${selectedSport === 'F1' ? 'GAP' : (selectedSport === 'NBA' ? 'DIFF' : 'GD')}</th>
+              <th style="padding: 12px 16px; text-align: center;">GD</th>
               <th style="padding: 12px 16px; text-align: center; font-weight: 900;">PTS</th>
             </tr>
           </thead>
@@ -2069,17 +2177,17 @@ export function renderFootballSportsHub() {
         <div>
           <h2 style="font-size: 1.5rem; font-weight: 800; margin: 0; color: var(--primary-color); display: flex; align-items: center; gap: 8px;">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--primary-color);"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/></svg>
-            Live Sports Center
+            African Football & Sports Center
           </h2>
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 0 0;">Toggle between premium sports categories and real-time standings, match fixtures, and results.</p>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 0 0;">Standings, match fixtures, and results for CAF Champions League, DStv Premiership (PSL), and NPFL.</p>
         </div>
         
         <div style="display: flex; background: var(--card-bg); padding: 4px; border-radius: 12px; border: 1px solid var(--border-color); gap: 4px;">
-          ${['EPL', 'NBA', 'F1'].map(sport => `
+          ${['CAF', 'PSL', 'NPFL'].map(sport => `
             <button onclick="selectSportsHubSport('${sport}')" style="padding: 8px 16px; border: none; font-size: 0.85rem; font-weight: 700; border-radius: 8px; cursor: pointer; transition: all 0.2s; 
               background: ${selectedSport === sport ? 'var(--primary-color)' : 'transparent'}; 
               color: ${selectedSport === sport ? 'white' : 'var(--text-muted)'};">
-              ${sport === 'EPL' ? '⚽ EPL' : (sport === 'NBA' ? '🏀 NBA' : '🏎️ F1')}
+              ${sport === 'CAF' ? '🏆 CAF Champions League' : (sport === 'PSL' ? '🇿🇦 PSL (South Africa)' : '🇳🇬 NPFL (Nigeria)')}
             </button>
           `).join('')}
         </div>
@@ -2089,7 +2197,7 @@ export function renderFootballSportsHub() {
         ${['Tables', 'Fixtures', 'Results', 'Leagues'].map(sec => `
           <button onclick="selectSportsHubSection('${sec}')" style="background: none; border: none; padding: 10px 5px; font-size: 0.95rem; font-weight: 600; cursor: pointer; position: relative; transition: color 0.2s;
             color: ${selectedSection === sec ? 'var(--primary-color)' : 'var(--text-muted)'};">
-            ${sec === 'Tables' ? '📊 Tables & Standings' : (sec === 'Fixtures' ? '📅 Upcoming Fixtures' : (sec === 'Results' ? '🏆 Recent Results' : 'ℹ️ League Overview'))}
+            ${sec === 'Tables' ? '📊 Standings' : (sec === 'Fixtures' ? '📅 Upcoming Fixtures' : (sec === 'Results' ? '🏆 Match Results' : 'ℹ️ League Info'))}
             ${selectedSection === sec ? `<div style="position: absolute; bottom: -1px; left: 0; right: 0; height: 3px; background: var(--primary-color); border-radius: 2px;"></div>` : ''}
           </button>
         `).join('')}
@@ -2110,12 +2218,12 @@ function renderCategory(container, title, items, type = 'news') {
   const totalPages = Math.ceil(items.length / pageSize);
   
   const intros = {
-    'Global Politics': 'Comprehensive coverage of international relations, diplomatic shifts, and breaking political intelligence from global capitals.',
-    'Business Journal': 'Market leading insights, economic analysis, and corporate reporting designed for the modern decision maker.',
-    'Football Central': 'Real-time scores, transfer exclusives, and in-depth match analysis from the world\'s premiere football leagues.',
-    'Tech Innovation': 'Tracking the cutting edge of technological advancement, from AI breakthroughs to future gadgetry.',
-    'Pop Culture': 'Your essential guide to global entertainment, celebrity narratives, and the trends shaping modern culture.',
-    'Knowledge Desk': 'A repository of deep-dive intelligence, historical milestones, and fascinating factual narratives.'
+    'African Politics': 'Comprehensive coverage of sovereign policy, parliamentary debate, deregulation, and constitutional governance across Pretoria, Abuja, Nairobi, Luanda, Mogadishu, Maputo, and Kinshasa.',
+    'Business Journal': 'Market-leading insights, free-market reforms, AfCFTA trade corridors, and African corporate reporting for sovereign growth.',
+    'Football Central': 'Real-time scores, transfer exclusives, and match analysis for CAF Champions League, PSL (DStv Premiership), NPFL, and African Stars.',
+    'Tech Innovation': 'Tracking African tech sovereignty, fintech growth in Lagos & Johannesburg, mobile money, and satellite broadband across Sub-Saharan Africa.',
+    'Pop Culture': 'Your essential guide to Afrobeats, Amapiano, Nollywood blockbusters, and the cultural trends shaping modern Africa.',
+    'Knowledge Desk': 'A repository of deep-dive intelligence on African history, sovereign economic policy, and ancient civilizational milestones.'
   };
 
   const isFollowed = state.userProfile?.followedCategories?.includes(title);
@@ -2841,7 +2949,7 @@ window.triggerContribution = (type) => {
 };
 
 function renderAuthor(container, authorName) {
-  const articles = [...state.news, ...state.autoNews].filter(n => 
+  const articles = getAllArticles().filter(n => 
     (n.author === authorName) || 
     (authorName.includes(n.category) && n.isAuto)
   ).sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
@@ -2970,7 +3078,7 @@ function attachCardListeners() {
 }
 
 function openDetail(id, type) {
-  const item = [...state.news, ...state.autoNews, ...thingsToKnow].find(i => i.id === id);
+  const item = [...getAllArticles(), ...thingsToKnow].find(i => i.id === id);
   if (!item) return;
 
   const isSaved = state.savedItems.some(s => s.id === item.id);
@@ -3030,7 +3138,7 @@ function updateCommentsList(comments) {
 }
 
 function renderModalContent(item, type, isSaved, initialComments) {
-  const allNews = [...state.news, ...state.autoNews];
+  const allNews = getAllArticles();
   const relatedArticles = allNews
     .filter(n => n.category === item.category && n.id !== item.id)
     .sort(() => 0.5 - Math.random()) // Shuffle for better variety
@@ -3236,7 +3344,7 @@ function handleSearch(e) {
 
   // Aggregate all possible search items
   const allItems = [
-    ...state.autoNews.map(item => ({ ...item, type: 'news' }))
+    ...getAllArticles().map(item => ({ ...item, type: 'news' }))
   ];
 
   const results = allItems.filter(item => 
