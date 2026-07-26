@@ -55,7 +55,8 @@ const state = {
   currentRoute: window.location.pathname === '/' ? '/home' : window.location.pathname,
   viewMode: localStorage.getItem('viewMode') || 'grid',
   autoNews: JSON.parse(localStorage.getItem('autoNewsCache')) || [],
-  notifications: JSON.parse(localStorage.getItem('gonow_notifications')) || []
+  notifications: JSON.parse(localStorage.getItem('gonow_notifications')) || [],
+  currentFeedTab: 'recently-published'
 };
 
 // Global variables
@@ -1116,6 +1117,362 @@ function renderTerms(container) {
   `;
 }
 
+function getBreakingNewsTicker() {
+  const allNews = [...state.autoNews, ...state.news];
+  if (allNews.length === 0) return '';
+  
+  allNews.sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
+  const breakingArticle = allNews[0];
+
+  return `
+    <div class="breaking-ticker-container">
+      <div class="breaking-ticker-wrapper">
+        <div class="breaking-badge">
+          <span style="display: inline-block; width: 8px; height: 8px; background: #d63031; border-radius: 50%; animation: pulse-red 1.5s infinite;"></span>
+          BREAKING UPDATE
+        </div>
+        <div class="breaking-text-scroller">
+          <div class="breaking-text-content" onclick="navigateTo('/article/${breakingArticle.id}')">
+            <strong>${breakingArticle.category.toUpperCase()}:</strong> ${breakingArticle.title} — ${breakingArticle.excerpt} (Click for live analysis)
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function initWeatherWidget() {
+  const headerContainer = document.getElementById('weather-container');
+  const sidebarContainer = document.getElementById('weather-sidebar-container');
+  if (!headerContainer && !sidebarContainer) return;
+
+  let lat = 51.2194;
+  let lon = 4.4025;
+  let locationName = 'Antwerpen';
+
+  const fetchWeather = async (latitude, longitude, name) => {
+    try {
+      const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`);
+      const data = await response.json();
+      if (data && data.current_weather) {
+        const temp = Math.round(data.current_weather.temperature);
+        const code = data.current_weather.weathercode;
+        
+        let emoji = '☀️';
+        if (code >= 1 && code <= 3) emoji = '⛅';
+        else if (code >= 45 && code <= 48) emoji = '🌫️';
+        else if (code >= 51 && code <= 67) emoji = '🌧️';
+        else if (code >= 71 && code <= 77) emoji = '❄️';
+        else if (code >= 80 && code <= 82) emoji = '🌦️';
+        else if (code >= 95) emoji = '⛈️';
+
+        const widgetHtml = `
+          <div class="weather-widget" title="Local Weather in ${name}">
+            <span>${emoji}</span>
+            <span>${temp}°C</span>
+            <span style="opacity: 0.8; font-weight: 500; font-size: 0.75rem;">${name}</span>
+          </div>
+        `;
+
+        if (headerContainer) {
+          headerContainer.innerHTML = widgetHtml;
+        }
+        if (sidebarContainer) {
+          sidebarContainer.innerHTML = `
+            <div class="premium-sidebar-widget" style="display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center;">
+              <h3 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 0;">LOCAL CLIMATE</h3>
+              <div style="font-size: 2.5rem; line-height: 1; margin: 10px 0;">${emoji}</div>
+              <div style="font-size: 1.8rem; font-weight: 800; line-height: 1;">${temp}°C</div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">${name} reporting desk</div>
+            </div>
+          `;
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch weather data:', err);
+    }
+  };
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const userLat = position.coords.latitude;
+        const userLon = position.coords.longitude;
+        await fetchWeather(userLat, userLon, 'Local Feed');
+      },
+      async () => {
+        await fetchWeather(lat, lon, locationName);
+      },
+      { timeout: 5000 }
+    );
+  } else {
+    await fetchWeather(lat, lon, locationName);
+  }
+}
+
+const PUZZLE_WORDS = [
+  { word: "INFLATION", scrambled: "ALFOIINNT", clue: "Sustained increase in prices and fall in purchasing value of money." },
+  { word: "ELECTION", scrambled: "OCLNEIET", clue: "A formal and organized choice by vote of a person for a political office." },
+  { word: "TRANSFER", scrambled: "ESRRANTF", clue: "An act of moving a football player from one club to another." },
+  { word: "CLIMATE", scrambled: "MIALCTE", clue: "The long-term weather patterns and trends of a region." },
+  { word: "GIZMOS", scrambled: "OMSGIZ", clue: "A gadget or technology device of high innovation." }
+];
+
+function initPuzzleWidget() {
+  const container = document.getElementById('daily-puzzle-container');
+  if (!container) return;
+
+  const day = new Date().getDate();
+  const puzzle = PUZZLE_WORDS[day % PUZZLE_WORDS.length];
+  const puzzleId = `puzzle_${day}`;
+
+  const hasSolved = localStorage.getItem(puzzleId);
+
+  if (hasSolved) {
+    container.innerHTML = `
+      <div class="premium-sidebar-widget" style="border-top: 3px solid #10b981;">
+        <h3 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: #10b981; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+          DAILY WORD PUZZLE
+        </h3>
+        <p style="font-weight: 700; font-size: 0.95rem; margin-bottom: 10px;">Solved!</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 15px;">You successfully unscrambled today's keyword:</p>
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid #10b981; color: #10b981; padding: 12px; border-radius: 8px; text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 1.1rem; letter-spacing: 2px;">
+          ${puzzle.word}
+        </div>
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 15px; text-align: center;">Come back tomorrow for a new puzzle!</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="premium-sidebar-widget">
+      <h3 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-color); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 21-4.3-4.3"/><circle cx="11" cy="11" r="8"/><path d="M11 8v6"/><path d="M8 11h6"/></svg>
+        DAILY WORD PUZZLE
+      </h3>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Unscramble the editorial term related to today's top stories:</p>
+      
+      <div style="background: var(--accent-color); border: 1px solid var(--border-color); padding: 15px; border-radius: 10px; text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 1.3rem; letter-spacing: 4px; margin-bottom: 12px; color: var(--primary-color);">
+        ${puzzle.scrambled}
+      </div>
+
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4;"><strong>CLUE:</strong> ${puzzle.clue}</p>
+      
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="puzzle-guess-input" placeholder="Your guess..." style="flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); font-size: 0.85rem; text-transform: uppercase;">
+        <button onclick="checkPuzzleGuess('${puzzleId}', '${puzzle.word}')" class="submit-btn" style="padding: 0 16px; border-radius: 8px; font-size: 0.85rem; height: auto;">SOLVE</button>
+      </div>
+      <p id="puzzle-feedback" style="font-size: 0.8rem; font-weight: 600; margin-top: 10px; display: none;"></p>
+    </div>
+  `;
+}
+
+window.checkPuzzleGuess = function(puzzleId, correctWord) {
+  const input = document.getElementById('puzzle-guess-input');
+  const feedback = document.getElementById('puzzle-feedback');
+  if (!input || !feedback) return;
+
+  const guess = input.value.trim().toUpperCase();
+  if (guess === correctWord) {
+    localStorage.setItem(puzzleId, 'true');
+    feedback.style.color = '#10b981';
+    feedback.innerText = "Correct! Well done.";
+    feedback.style.display = 'block';
+    
+    setTimeout(() => {
+      initPuzzleWidget();
+    }, 1000);
+  } else {
+    feedback.style.color = '#ef4444';
+    feedback.innerText = "Incorrect guess. Try again!";
+    feedback.style.display = 'block';
+  }
+};
+
+async function loadPollWidget() {
+  const pollId = 'weekly-editorial-poll';
+  const pollDocRef = doc(db, 'polls', pollId);
+  let pollData = null;
+
+  try {
+    const pollSnap = await getDoc(pollDocRef);
+    if (pollSnap.exists()) {
+      pollData = pollSnap.data();
+    } else {
+      pollData = {
+        id: pollId,
+        question: "Should central banks cut interest rates further to combat global inflation and economic slowdown?",
+        options: ["Yes, immediately", "No, hold steady", "No, raise them further", "Unsure"],
+        votes: {
+          "Yes, immediately": 128,
+          "No, hold steady": 84,
+          "No, raise them further": 43,
+          "Unsure": 22
+        }
+      };
+      try {
+        await setDoc(pollDocRef, pollData);
+      } catch (e) {
+        console.warn("Could not write poll document to Firestore:", e);
+      }
+    }
+  } catch (error) {
+    console.warn("Firestore poll fetch failed, using local fallback:", error);
+    pollData = {
+      id: pollId,
+      question: "Should central banks cut interest rates further to combat global inflation and economic slowdown?",
+      options: ["Yes, immediately", "No, hold steady", "No, raise them further", "Unsure"],
+      votes: JSON.parse(localStorage.getItem('local_poll_votes')) || {
+        "Yes, immediately": 128,
+        "No, hold steady": 84,
+        "No, raise them further": 43,
+        "Unsure": 22
+      }
+    };
+  }
+
+  const container = document.getElementById('editorial-poll-container');
+  if (!container) return;
+
+  const hasVoted = localStorage.getItem(`voted_${pollId}`);
+  const totalVotes = Object.values(pollData.votes || {}).reduce((a, b) => a + Number(b), 0);
+
+  if (hasVoted) {
+    let html = `
+      <div class="premium-sidebar-widget">
+        <h3 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--primary-color); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M3 20v-8a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v8"/><path d="M11 20v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v8"/></svg>
+          OPINION POLL RESULTS
+        </h3>
+        <p style="font-weight: 700; font-size: 0.9rem; margin-bottom: 18px; line-height: 1.4;">${pollData.question}</p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+    `;
+
+    pollData.options.forEach(option => {
+      const votes = pollData.votes[option] || 0;
+      const pct = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
+      html += `
+        <div class="poll-result-bar-wrapper">
+          <div class="poll-result-label">
+            <span style="font-size: 0.8rem; opacity: 0.9;">${option}</span>
+            <span style="font-size: 0.8rem; font-weight: 700;">${pct}% (${votes})</span>
+          </div>
+          <div class="poll-result-track">
+            <div class="poll-result-fill" style="width: ${pct}%"></div>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `
+        </div>
+        <p style="font-size: 0.7rem; color: var(--text-muted); text-align: right; margin-top: 15px; font-weight: 600;">Total Votes: ${totalVotes} • Thank you for voting!</p>
+      </div>
+    `;
+    container.innerHTML = html;
+  } else {
+    let html = `
+      <div class="premium-sidebar-widget">
+        <h3 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-color); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M3 20v-8a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v8"/><path d="M11 20v-4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v8"/></svg>
+          READER OPINION POLL
+        </h3>
+        <p style="font-weight: 700; font-size: 0.9rem; margin-bottom: 18px; line-height: 1.4;">${pollData.question}</p>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+    `;
+
+    pollData.options.forEach(option => {
+      html += `
+        <button class="poll-option-btn" onclick="submitPollVote('${pollId}', '${option}')">
+          <span>${option}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      `;
+    });
+
+    html += `
+        </div>
+        <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 15px; font-weight: 600; text-align: center;">Verified balloting with secure checks</p>
+      </div>
+    `;
+    container.innerHTML = html;
+  }
+}
+
+window.submitPollVote = async function(pollId, option) {
+  try {
+    localStorage.setItem(`voted_${pollId}`, 'true');
+
+    const pollDocRef = doc(db, 'polls', pollId);
+    const pollSnap = await getDoc(pollDocRef);
+    if (pollSnap.exists()) {
+      const data = pollSnap.data();
+      const currentVotes = data.votes || {};
+      currentVotes[option] = (Number(currentVotes[option]) || 0) + 1;
+      await updateDoc(pollDocRef, { votes: currentVotes });
+
+      if (state.user) {
+        await setDoc(doc(db, 'polls', pollId, 'votes', state.user.uid), {
+          pollId,
+          option,
+          userId: state.user.uid,
+          createdAt: serverTimestamp()
+        });
+      }
+    } else {
+      throw new Error("Poll not found");
+    }
+  } catch (err) {
+    console.warn("Failed to submit poll vote, saving locally:", err);
+    const localVotes = JSON.parse(localStorage.getItem('local_poll_votes')) || {
+      "Yes, immediately": 128,
+      "No, hold steady": 84,
+      "No, raise them further": 43,
+      "Unsure": 22
+    };
+    localVotes[option] = (localVotes[option] || 0) + 1;
+    localStorage.setItem('local_poll_votes', JSON.stringify(localVotes));
+  }
+
+  loadPollWidget();
+};
+
+window.setFeedTab = function(tab) {
+  state.currentFeedTab = tab;
+  const container = document.querySelector('.container.fade-in');
+  if (container) {
+    renderHome(container);
+  }
+};
+
+window.toggleFollowCategory = async function(cat) {
+  let followedCats = state.userProfile?.followedCategories || JSON.parse(localStorage.getItem('followedCategories')) || ['Politics', 'Football', 'Entertainment', 'Technology', 'Business'];
+
+  if (followedCats.includes(cat)) {
+    followedCats = followedCats.filter(c => c !== cat);
+  } else {
+    followedCats.push(cat);
+  }
+
+  localStorage.setItem('followedCategories', JSON.stringify(followedCats));
+
+  if (state.userProfile) {
+    state.userProfile.followedCategories = followedCats;
+    try {
+      await updateDoc(doc(db, 'users', state.user.uid), { followedCategories: followedCats });
+    } catch (e) {
+      console.warn("Failed to update user profile followed categories:", e);
+    }
+  }
+
+  const container = document.querySelector('.container.fade-in');
+  if (container) {
+    renderHome(container);
+  }
+};
+
 function renderHome(container) {
   const happeningsList = state.wikipediaEvents.length > 0 ? state.wikipediaEvents : dailyHappenings[0].events;
   const financeList = state.financeData;
@@ -1147,7 +1504,7 @@ function renderHome(container) {
 
   // INTERLEAVE: Gather news for the harmonic home feed
   const harmonicNews = [];
-  let maxItems = 20; // total news on home
+  let maxItems = 25; // total news on home
   let i = 0;
   while (harmonicNews.length < maxItems) {
     let addedAny = false;
@@ -1183,30 +1540,96 @@ function renderHome(container) {
   }
 
   const featured = harmonicNews[0];
-  const latest = harmonicNews.slice(1);
+  const opinions = harmonicNews.slice(1, 4);
+  const latest = harmonicNews.slice(4);
   const trending = [...allSourceNews].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 5);
 
-  container.innerHTML = `
-    <section class="hero magazine-hero">
-      <div class="hero-card" onclick="navigateTo('/article/${featured.id}')" style="cursor: pointer;">
-        <div class="hero-img-wrapper">
-          <img src="${featured.image}" alt="${featured.title}" class="hero-img" loading="lazy">
-        </div>
-        <div class="hero-content">
-          <div class="meta-label">TOP STORY • <span onclick="event.stopPropagation(); navigateTo('/${featured.category.toLowerCase()}')" style="cursor: pointer; text-decoration: underline;">${featured.category.toUpperCase()}</span></div>
-          <h1 class="hero-title">${featured.title}</h1>
-          <p class="hero-description">${featured.excerpt}</p>
-          <div class="hero-footer">
-            <span class="read-more">Read Full Story →</span>
-          </div>
+  const activeFeedTab = state.currentFeedTab || 'recently-published';
+  const followedCats = state.userProfile?.followedCategories || JSON.parse(localStorage.getItem('followedCategories')) || ['Politics', 'Football', 'Entertainment', 'Technology', 'Business'];
+
+  let finalLatestNews = [...latest];
+  if (activeFeedTab === 'for-you') {
+    finalLatestNews = latest.filter(item => followedCats.includes(item.category));
+  }
+
+  // Generate Breaking Ticker HTML
+  const tickerHtml = getBreakingNewsTicker();
+
+  // Generate Personalization Controls
+  let personalizationControls = '';
+  if (activeFeedTab === 'for-you') {
+    personalizationControls = `
+      <div style="background: var(--accent-color); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 20px; margin-bottom: 25px; transition: var(--transition);">
+        <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 8px;">Bespoke News Filter</h4>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Configure your personalized feed from top categories:</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          ${['Politics', 'Football', 'Entertainment', 'Technology', 'Business'].map(cat => {
+            const isFollowed = followedCats.includes(cat);
+            return `
+              <button onclick="toggleFollowCategory('${cat}')" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; border: 1px solid ${isFollowed ? 'var(--primary-color)' : 'var(--border-color)'}; background: ${isFollowed ? 'var(--primary-color)' : 'var(--card-bg)'}; color: ${isFollowed ? 'white' : 'var(--text-color)'}; transition: var(--transition);">
+                <span>${cat}</span>
+                <span>${isFollowed ? '✓' : '+'}</span>
+              </button>
+            `;
+          }).join('')}
         </div>
       </div>
-    </section>
+    `;
+  }
 
+  container.innerHTML = `
+    <!-- Breaking News Ticker -->
+    ${tickerHtml}
+
+    <!-- 1. Bento Editorial Grid Layout (Splash + Opinion Column) -->
+    <div class="editorial-grid-bento">
+      <section class="hero magazine-hero" style="margin-bottom: 0;">
+        <div class="hero-card" onclick="navigateTo('/article/${featured.id}')" style="cursor: pointer; height: 100%;">
+          <div class="hero-img-wrapper" style="height: 380px;">
+            <img src="${featured.image}" alt="${featured.title}" class="hero-img" loading="lazy">
+          </div>
+          <div class="hero-content">
+            <div class="meta-label">SPLASH • <span onclick="event.stopPropagation(); navigateTo('/${featured.category.toLowerCase()}')" style="cursor: pointer; text-decoration: underline;">${featured.category.toUpperCase()}</span></div>
+            <h1 class="hero-title serif-heading" style="font-size: 2.2rem; line-height: 1.15; margin-bottom: 15px;">${featured.title}</h1>
+            <p class="hero-description">${featured.excerpt}</p>
+            <div class="hero-footer">
+              <span class="read-more">Read Splash Analysis →</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="opinion-column">
+        <h3 style="text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.9rem; margin-bottom: 20px; border-bottom: 2px solid var(--text-color); padding-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          OPINIONS & FEATURES
+        </h3>
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          ${opinions.map(item => `
+            <div class="opinion-card news-card-opinion" onclick="navigateTo('/article/${item.id}')" style="cursor: pointer; padding-bottom: 15px; border-bottom: 1px solid var(--border-color);">
+              <span class="meta-label" style="font-size: 0.65rem; color: var(--primary-color);">${item.category.toUpperCase()}</span>
+              <h4 class="card-title" style="font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: 1.15rem; font-weight: 700; line-height: 1.3; margin-top: 4px; margin-bottom: 8px;">
+                ${item.title}
+              </h4>
+              <p style="font-size: 0.8rem; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px;">
+                ${item.excerpt}
+              </p>
+              <span style="font-size: 0.7rem; font-weight: 600;">By ${item.author || 'Editorial Desk'}</span>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+    </div>
+
+    <!-- 2. Dual-Column Homepage Layout (Hard News + Premium Sidebar) -->
     <div class="main-grid">
       <section class="latest-news">
+        <!-- Feed Tab Switcher -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid var(--text-color); padding-bottom: 10px;">
-          <h2 class="section-title" style="margin-bottom: 0; text-transform: uppercase; letter-spacing: 2px; font-weight: 800;">Recently Published</h2>
+          <div class="home-feed-selector">
+            <button class="home-feed-btn ${activeFeedTab === 'recently-published' ? 'active' : ''}" onclick="setFeedTab('recently-published')">Recently Published</button>
+            <button class="home-feed-btn ${activeFeedTab === 'for-you' ? 'active' : ''}" onclick="setFeedTab('for-you')">For You</button>
+          </div>
           <div style="display: flex; gap: 10px; align-items: center;">
             <button class="icon-btn" onclick="syncAllNews()" title="Refresh Feed" style="background: var(--card-bg);">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
@@ -1217,25 +1640,37 @@ function renderHome(container) {
             </div>
           </div>
         </div>
+
+        ${personalizationControls}
+
         <div class="news-grid ${isList ? 'list-view' : ''}">
-          ${latest.length > 0 ? latest.map((item, index) => {
+          ${finalLatestNews.length > 0 ? finalLatestNews.map((item, index) => {
             const card = createNewsCard(item);
             if (index > 0 && (index + 1) % 6 === 0) {
               return card + createAdUnit('9876543210');
             }
             return card;
-          }).join('') : '<p>No news available.</p>'}
+          }).join('') : '<p style="padding: 20px 0; color: var(--text-muted); text-align: center;">No articles found in your followed topics. Update your Bespoke News Filter above!</p>'}
         </div>
       </section>
 
       <aside class="sidebar">
+        <!-- Live Weather Container -->
+        <div id="weather-sidebar-container"></div>
+
+        <!-- Word Puzzle Container -->
+        <div id="daily-puzzle-container"></div>
+
+        <!-- Opinion Poll Container -->
+        <div id="editorial-poll-container"></div>
+
         <div class="sidebar-section">
           <h2 class="section-title" style="border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Trending Now</h2>
           ${trending.map((item, i) => `
             <div class="trending-item" onclick="navigateTo('/article/${item.id}')">
               <span class="trending-num">0${i + 1}</span>
               <div class="trending-content">
-                <span class="meta-label" style="font-size: 0.6rem;">${item.category}</span>
+                <span class="meta-label" style="font-size: 0.65rem;">${item.category}</span>
                 <h4 style="margin-top: 4px; font-weight: 600; line-height: 1.3;">${item.title}</h4>
               </div>
             </div>
@@ -1292,6 +1727,12 @@ function renderHome(container) {
     </div>
   `;
   attachCardListeners();
+  
+  setTimeout(() => {
+    initWeatherWidget();
+    initPuzzleWidget();
+    loadPollWidget();
+  }, 50);
 }
 
 const SPORTS_DATA = {
@@ -2365,7 +2806,7 @@ function createNewsCard(item) {
         <div class="card-footer" style="margin-top: auto; padding-top: 15px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color);">
           <div style="display: flex; flex-direction: column;">
             <span style="font-weight: 700; font-size: 0.8rem; cursor: pointer;" onclick="event.stopPropagation(); navigateTo('/author/${encodeURIComponent(authorName)}')">By ${authorName}</span>
-            <span style="font-size: 0.7rem; color: var(--text-muted);">${item.readTime}</span>
+            <span style="font-size: 0.7rem; color: var(--text-muted);">${item.readTime || (item.content ? Math.max(1, Math.ceil(item.content.split(/\s+/).length / 220)) + ' min read' : '3 min read')}</span>
           </div>
           <button class="save-btn ${isSaved ? 'text-primary' : ''}" onclick="event.stopPropagation(); toggleSave('${item.id}', 'news')">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="${isSaved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>

@@ -1,0 +1,19 @@
+/* 
+  Admin Dashboard, Content Management Portal & Analytics Styles
+*/
+
+.admin-dashboard-wrapper {
+  animation: fadeIn 0.4s ease-out;
+  color: var(--text-color);
+}
+
+.admin-main {
+  background: var(--card-bg);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.admin-sidebar .daily-box {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+}

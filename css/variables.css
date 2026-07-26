@@ -1,0 +1,35 @@
+/* 
+  Theme Variables & Color Scheme Configurations
+*/
+
+:root {
+  /* Light Mode */
+  --bg-color: #ffffff;
+  --text-color: #1a1a1a;
+  --text-muted: #666666;
+  --primary-color: #0066ff;
+  --accent-color: #f0f7ff;
+  --border-color: #eeeeee;
+  --card-bg: #ffffff;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --nav-bg: rgba(255, 255, 255, 0.8);
+  --footer-bg: #f9f9f9;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --header-height: 80px;
+  --radius: 16px;
+  --font-display: 'Inter', sans-serif;
+}
+
+[data-theme="dark"] {
+  /* Dark Mode */
+  --bg-color: #0a0a0a;
+  --text-color: #f5f5f5;
+  --text-muted: #a0a0a0;
+  --primary-color: #3385ff;
+  --accent-color: #1a1a1a;
+  --border-color: #222222;
+  --card-bg: #151515;
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  --nav-bg: rgba(10, 10, 10, 0.8);
+  --footer-bg: #050505;
+}

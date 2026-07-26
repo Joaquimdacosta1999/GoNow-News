@@ -1,0 +1,78 @@
+/* 
+  Footer Layout, Links & Newsletter Section
+*/
+
+footer {
+  background-color: var(--footer-bg);
+  padding: 60px 0 20px;
+  margin-top: 80px;
+  border-top: 1px solid var(--border-color);
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 40px;
+  margin-bottom: 40px;
+}
+
+.footer-brand p {
+  color: var(--text-muted);
+  margin-top: 15px;
+  max-width: 300px;
+}
+
+.footer-links h4 {
+  margin-bottom: 20px;
+}
+
+.footer-links ul li {
+  margin-bottom: 10px;
+}
+
+.footer-links ul li a {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.footer-links ul li a:hover {
+  color: var(--primary-color);
+}
+
+.footer-bottom {
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.social-links {
+  display: flex;
+  gap: 15px;
+}
+
+.newsletter-form input:focus {
+  outline: 2px solid var(--primary-color);
+  border-color: transparent;
+}
+
+.footer-newsletter-row {
+  margin-top: 50px;
+}
+
+@media (max-width: 900px) {
+  .footer-newsletter-row {
+    padding: 30px !important;
+  }
+  .nl-grid {
+    grid-template-columns: 1fr !important;
+    text-align: center;
+    gap: 20px !important;
+  }
+  .newsletter-form-footer {
+    width: 100%;
+  }
+}

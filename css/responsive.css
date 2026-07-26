@@ -1,0 +1,166 @@
+/* 
+  Media Queries & Mobile Responsiveness
+*/
+
+@media (max-width: 1100px) {
+  .nav-links {
+    gap: 12px;
+  }
+  .nav-links a {
+    font-size: 0.8rem;
+  }
+  .container {
+    padding: 0 5%;
+  }
+  .main-grid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+}
+
+@media (max-width: 850px) {
+  .nav-links {
+    display: none;
+  }
+  .mobile-menu-btn {
+    display: flex;
+  }
+}
+
+@media (max-width: 768px) {
+  #main-content {
+    padding-top: calc(var(--header-height) + 15px);
+  }
+
+  .container {
+    padding: 0 16px;
+  }
+
+  /* News24 Style Mobile Feed */
+  .news-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .news-grid .card {
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 0;
+    flex-direction: row;
+    padding: 16px 0;
+    gap: 16px;
+    align-items: flex-start;
+    box-shadow: none;
+    background: none;
+  }
+
+  .news-grid .card:hover {
+    transform: none;
+  }
+
+  .news-grid .card-img-wrapper {
+    width: 90px;
+    height: 90px;
+    min-width: 90px;
+    order: 2; /* Image on natural right */
+    border-radius: 6px;
+  }
+
+  .news-grid .card-content {
+    padding: 0;
+    order: 1; /* Text on left */
+    flex-grow: 1;
+  }
+
+  .news-grid .card-title {
+    font-size: 1.05rem;
+    line-height: 1.35;
+    margin: 4px 0;
+    font-weight: 700;
+  }
+
+  .news-grid .card-excerpt {
+    display: none;
+  }
+
+  .news-grid .card-footer {
+    border: none;
+    padding: 0;
+    margin-top: 4px;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .news-grid .card-footer div {
+    flex-direction: row !important;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* Magazine Hero Mobile - Immersive Look */
+  .magazine-hero .hero-card {
+    height: auto;
+    min-height: 380px;
+  }
+
+  .magazine-hero .hero-title {
+    font-size: 1.7rem;
+    line-height: 1.2;
+    margin: 10px 0;
+  }
+
+  .magazine-hero .hero-content {
+    padding: 20px;
+  }
+
+  .magazine-hero .hero-description {
+    font-size: 1rem;
+    -webkit-line-clamp: 3;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .main-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .nav-links {
+    display: none;
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    background: var(--bg-color);
+    flex-direction: column;
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    z-index: 2000;
+  }
+
+  .nav-links.active {
+    display: flex;
+  }
+
+  .nav-actions {
+    gap: 10px;
+  }
+
+  .logo {
+    font-size: 1.3rem;
+  }
+
+  .ad-container {
+    margin: 20px 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .detail-title {
+    font-size: 1.6rem;
+    line-height: 1.2;
+  }
+}

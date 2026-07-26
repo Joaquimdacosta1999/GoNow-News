@@ -124,6 +124,18 @@ service cloud.firestore {
       allow update: if true;
     }
     
+    match /polls/{pollId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if true;
+    }
+
+    match /polls/{pollId}/votes/{voteId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() && request.auth.uid == voteId;
+      allow delete: if isAdmin();
+    }
+    
     match /test/{docId} {
       allow read: if true;
     }

@@ -70,6 +70,35 @@
         "clicks": { "type": "integer" }
       },
       "required": ["title", "description", "link", "imageUrl", "type"]
+    },
+    "Poll": {
+      "title": "Editorial Poll",
+      "description": "An interactive editorial opinion poll.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "question": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "votes": {
+          "type": "object"
+        }
+      },
+      "required": ["id", "question", "options", "votes"]
+    },
+    "PollVote": {
+      "title": "Poll Vote",
+      "description": "A single user's vote in an editorial poll.",
+      "type": "object",
+      "properties": {
+        "pollId": { "type": "string" },
+        "option": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["pollId", "option", "userId", "createdAt"]
     }
   },
   "firestore": {
@@ -88,6 +117,14 @@
     "/affiliate_ads/{adId}": {
       "schema": "AffiliateAd",
       "description": "Collection of affiliate products and custom sponsored advertisements."
+    },
+    "/polls/{pollId}": {
+      "schema": "Poll",
+      "description": "Opinion polls."
+    },
+    "/polls/{pollId}/votes/{voteId}": {
+      "schema": "PollVote",
+      "description": "Individual votes for verification."
     }
   }
 }
