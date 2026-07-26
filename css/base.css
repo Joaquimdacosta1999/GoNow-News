@@ -117,6 +117,40 @@ h1, h2, h3, h4 {
 
 .skeleton-view {
   animation: fadeIn 1s ease-in-out;
+  padding: 40px 0;
+}
+
+.skeleton-title {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+}
+
+.skeleton-desc {
+  color: var(--text-muted);
+  margin-bottom: 40px;
+  font-size: 1.2rem;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.skeleton-card {
+  background: var(--card-bg);
+  padding: 25px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.skeleton-card-title {
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+}
+
+.skeleton-card-text {
+  color: var(--text-muted);
 }
 
 /* Utility Helpers */

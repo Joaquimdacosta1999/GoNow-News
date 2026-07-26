@@ -84,7 +84,7 @@
           <a href="/football">Football</a>
           <a href="/entertainment">Entertainment</a>
           <a href="/technology">Tech</a>
-          <a href="/contribute" style="color: var(--primary-color); font-weight: 800; display: flex; align-items: center; gap: 4px;">
+          <a href="/contribute" class="nav-support-btn">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
             Support
           </a>
@@ -92,14 +92,14 @@
         </nav>
 
         <div class="nav-actions">
-          <a href="/admin" id="admin-link" class="icon-btn hidden" title="Admin Dashboard" style="width: auto; padding: 0 12px; gap: 6px; background: var(--primary-color); color: white; border-radius: 20px;">
+          <a href="/admin" id="admin-link" class="icon-btn admin-link-btn hidden" title="Admin Dashboard">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <span style="font-size: 0.85rem; font-weight: 700;">Admin</span>
+            <span class="admin-link-text">Admin</span>
           </a>
           <button id="auth-btn" class="icon-btn" title="Login">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </button>
-          <div id="notif-wrapper" class="hidden" style="position: relative;">
+          <div id="notif-wrapper" class="notif-wrapper hidden">
             <button id="notif-btn" class="icon-btn" title="Notifications">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
               <span id="notif-badge" class="notif-badge hidden"></span>
@@ -107,7 +107,7 @@
             <div id="notif-dropdown" class="notif-dropdown">
               <div class="notif-header">
                 <span>Recent Alerts</span>
-                <button onclick="clearNotifications()" style="font-size: 0.7rem; color: var(--primary-color);">Clear All</button>
+                <button onclick="clearNotifications()" class="notif-clear-btn">Clear All</button>
               </div>
               <div id="notif-list" class="notif-list">
                 <p class="notif-empty">No new alerts.</p>
@@ -121,7 +121,7 @@
           <button id="theme-toggle" class="icon-btn" title="Toggle Theme" aria-label="Toggle Theme">
             <!-- Icon injected by JS -->
           </button>
-          <button class="mobile-menu-btn icon-btn" style="display: flex; background: var(--accent-color); padding: 10px; border-radius: 12px; margin-left: 5px; color: var(--primary-color);" onclick="document.querySelector('.nav-links').classList.toggle('active')" aria-label="Open Menu">
+          <button class="mobile-menu-btn icon-btn" onclick="document.querySelector('.nav-links').classList.toggle('active')" aria-label="Open Menu">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
           </button>
         </div>
@@ -130,21 +130,21 @@
 
     <main id="main-content">
       <!-- SEO Skeleton Content -->
-      <div class="skeleton-view" style="padding: 40px 0;">
-        <h1 style="font-size: 2.5rem; margin-bottom: 20px;">Top Stories on GoNow Today</h1>
-        <p style="color: var(--text-muted); margin-bottom: 40px; font-size: 1.2rem;">Stay informed with the latest breaking news in Politics, Tech, Football, and Entertainment. Real-time updates every 5 minutes.</p>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
-          <div style="background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border-color);">
-            <h2 style="font-size: 1.4rem; margin-bottom: 10px;">Historic Global Climate Agreement Signed</h2>
-            <p style="color: var(--text-muted);">World leaders in Geneva sign a landmark deal to reduce emissions by 50% by 2030, marking a new era in environmental policy.</p>
+      <div class="skeleton-view">
+        <h1 class="skeleton-title">Top Stories on GoNow Today</h1>
+        <p class="skeleton-desc">Stay informed with the latest breaking news in Politics, Tech, Football, and Entertainment. Real-time updates every 5 minutes.</p>
+        <div class="skeleton-grid">
+          <div class="skeleton-card">
+            <h2 class="skeleton-card-title">Historic Global Climate Agreement Signed</h2>
+            <p class="skeleton-card-text">World leaders in Geneva sign a landmark deal to reduce emissions by 50% by 2030, marking a new era in environmental policy.</p>
           </div>
-          <div style="background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border-color);">
-            <h2 style="font-size: 1.4rem; margin-bottom: 10px;">AI Revolution: Empathy in Voice</h2>
-            <p style="color: var(--text-muted);">New machine learning models allow AI assistants to detect human emotions via vocal analysis, changing how we interact with robots.</p>
+          <div class="skeleton-card">
+            <h2 class="skeleton-card-title">AI Revolution: Empathy in Voice</h2>
+            <p class="skeleton-card-text">New machine learning models allow AI assistants to detect human emotions via vocal analysis, changing how we interact with robots.</p>
           </div>
-          <div style="background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid var(--border-color);">
-            <h2 style="font-size: 1.4rem; margin-bottom: 10px;">Football: Underdogs Win Champions Cup</h2>
-            <p style="color: var(--text-muted);">A stunning last-minute goal secured a historic victory for league newcomers, upsetting the reigning giants in the finale.</p>
+          <div class="skeleton-card">
+            <h2 class="skeleton-card-title">Football: Underdogs Win Champions Cup</h2>
+            <p class="skeleton-card-text">A stunning last-minute goal secured a historic victory for league newcomers, upsetting the reigning giants in the finale.</p>
           </div>
         </div>
       </div>
@@ -155,21 +155,21 @@
       <div class="container">
         <div class="footer-grid">
           <div class="footer-brand">
-            <a href="/home" class="logo" style="font-size: 1.8rem; margin-bottom: 20px;">
+            <a href="/home" class="logo footer-logo">
               <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/><path d="m13 10-2 4h4l-2 4"/></svg>
               GoNow
             </a>
-            <p style="max-width: 350px; font-size: 1rem; line-height: 1.7; color: var(--text-muted);">
+            <p class="footer-brand-text">
               Refining the global news experience. GoNow is where precision meets speed, providing a clutter-free portal for the modern truth-seeker. Dedicated to high-authority reporting and independent analysis.
             </p>
-            <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 8px;">
-              <small style="font-weight: 700; color: var(--text-color); letter-spacing: 1px;">CONNECT WITH THE DESK</small>
-              <a href="mailto:support@gonow247.com" style="font-size: 0.95rem; color: var(--primary-color);">support@gonow247.com</a>
-              <p style="font-size: 0.85rem; color: var(--text-muted);">Antwerpen, Belgium</p>
+            <div class="footer-desk-info">
+              <small class="footer-desk-label">CONNECT WITH THE DESK</small>
+              <a href="mailto:support@gonow247.com" class="footer-desk-email">support@gonow247.com</a>
+              <p class="footer-desk-location">Antwerpen, Belgium</p>
             </div>
           </div>
           <div class="footer-links">
-            <h4 style="font-size: 1.1rem; letter-spacing: 1px;">DISCOVER</h4>
+            <h4 class="footer-column-title">DISCOVER</h4>
             <ul>
               <li><a href="/politics">Global Politics</a></li>
               <li><a href="/business">Business Journal</a></li>
@@ -179,14 +179,14 @@
             </ul>
           </div>
           <div class="footer-links">
-            <h4 style="font-size: 1.1rem; letter-spacing: 1px;">RESOURCES</h4>
+            <h4 class="footer-column-title">RESOURCES</h4>
             <ul>
               <li><a href="/saved">My Library</a></li>
               <li><a href="/about">Our Mission</a></li>
             </ul>
           </div>
           <div class="footer-links">
-            <h4 style="font-size: 1.1rem; letter-spacing: 1px;">TRUST & ETHICS</h4>
+            <h4 class="footer-column-title">TRUST & ETHICS</h4>
             <ul>
               <li><a href="/about">Editorial Ethics</a></li>
               <li><a href="/privacy">Privacy Trust</a></li>
@@ -196,15 +196,15 @@
           </div>
         </div>
         
-        <div class="footer-newsletter-row" style="margin-top: 40px; margin-bottom: 50px; padding: 40px; background: var(--accent-color); border-radius: 24px; border: 1px solid var(--border-color);">
-          <div class="nl-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
+        <div class="footer-newsletter-row">
+          <div class="nl-grid">
             <div>
-              <h3 style="font-size: 1.8rem; margin-bottom: 10px;">The GoNow Intelligence</h3>
-              <p style="color: var(--text-muted); font-size: 1rem;">Join 12,000+ daily readers. Get the top high-authority stories and market-moving insights delivered to your inbox every morning at 8:00 AM.</p>
+              <h3 class="nl-title">The GoNow Intelligence</h3>
+              <p class="nl-desc">Join 12,000+ daily readers. Get the top high-authority stories and market-moving insights delivered to your inbox every morning at 8:00 AM.</p>
             </div>
-            <form id="newsletter-form-footer" style="display: flex; gap: 12px;">
-              <input type="email" placeholder="professional@email.com" id="nl-email-footer" required style="flex: 1; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); font-size: 1rem;">
-              <button type="submit" class="submit-btn" style="padding: 0 32px; height: 56px; font-size: 1rem; letter-spacing: 1px; flex-shrink: 0;">SUBSCRIBE</button>
+            <form id="newsletter-form-footer" class="newsletter-form-footer">
+              <input type="email" placeholder="professional@email.com" id="nl-email-footer" class="nl-input" required>
+              <button type="submit" class="submit-btn nl-submit-btn">SUBSCRIBE</button>
             </form>
           </div>
         </div>

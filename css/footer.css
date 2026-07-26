@@ -22,6 +22,46 @@ footer {
   max-width: 300px;
 }
 
+.footer-logo {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+}
+
+.footer-brand-text {
+  max-width: 350px;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.footer-desk-info {
+  margin-top: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footer-desk-label {
+  font-weight: 700;
+  color: var(--text-color);
+  letter-spacing: 1px;
+}
+
+.footer-desk-email {
+  font-size: 0.95rem;
+  color: var(--primary-color);
+}
+
+.footer-desk-location {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.footer-column-title {
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+}
+
 .footer-links h4 {
   margin-bottom: 20px;
 }
@@ -60,7 +100,52 @@ footer {
 }
 
 .footer-newsletter-row {
-  margin-top: 50px;
+  margin-top: 40px;
+  margin-bottom: 50px;
+  padding: 40px;
+  background: var(--accent-color);
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.nl-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: center;
+}
+
+.nl-title {
+  font-size: 1.8rem;
+  margin-bottom: 10px;
+}
+
+.nl-desc {
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+.newsletter-form-footer {
+  display: flex;
+  gap: 12px;
+}
+
+.nl-input {
+  flex: 1;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-color);
+  font-size: 1rem;
+}
+
+.nl-submit-btn {
+  padding: 0 32px;
+  height: 56px;
+  font-size: 1rem;
+  letter-spacing: 1px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 900px) {
