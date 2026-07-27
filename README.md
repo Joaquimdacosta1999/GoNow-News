@@ -5,7 +5,7 @@ GoNow is a high-performance, mobile-first news and lifestyle portal built with *
 ## Key Features
 
 - **Real-Time RSS Sync:** Automatic fetching from global news sources every 5 minutes with cache-busting.
-- **Deep Story Engagement:** Articles feature 150-350 words excerpts for high value per click.
+- **Deep Story Engagement:** Articles feature 50-100 words excerpts for high value per click.
 - **Path-Based Routing:** Clean, SEO-friendly URLs (`/article/id`, `/politics`, etc.) for better indexing.
 - **SEO Optimized:** Dynamic meta tags, JSON-LD structured data, and skeleton content for crawlers.
 - **Interactive Portal:**
